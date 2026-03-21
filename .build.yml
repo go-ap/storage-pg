@@ -1,0 +1,19 @@
+image: alpine/edge
+packages:
+  - go
+sources:
+  - https://github.com/go-ap/storage-pg
+secrets:
+  - ee2fd3c2-57d4-420e-8035-dd09238bf177
+environment:
+  GO111MODULE: 'on'
+tasks:
+  - tests: |
+      cd storage-pg
+      make test
+
+  - coverage: |
+      cd storage-pg
+      git switch -C master origin/master
+      make coverage
+      go tool goveralls -flagname unit-tests -service=${CI_NAME} -coverprofile storage-pg.coverprofile -repotokenfile ~/.coveralls.tok
