@@ -47,6 +47,7 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 		t.Fatalf("err getting config: %s", err)
 	}
 
+	t.Skipf("we're not ready yet")
 	conf := Config{
 		User:     pconf.User,
 		Password: pconf.Password,
@@ -63,7 +64,6 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 	storage.errFn = t.Logf
 	storage.logFn = t.Logf
 
-	t.Skipf("we're not ready yet")
 	return storage
 }
 
