@@ -1,13 +1,29 @@
-image: alpine/edge
+image: archlinux
 packages:
   - go
+  - podman
 sources:
   - https://github.com/go-ap/storage-pg
 secrets:
   - ee2fd3c2-57d4-420e-8035-dd09238bf177
+  - 3f30fd61-e33d-4198-aafb-0ff341e9db1c
 environment:
   GO111MODULE: 'on'
+  DOCKER_HOST: unix:///run/user/1000/podman/podman.sock
 tasks:
+  - setup: |
+      cd storage-pg && make download
+      set -a +x
+      source ~/.buildah.env
+
+      _user=$(id -un)
+
+      echo 'unqualified-search-registries = ["docker.io"]' | sudo tee /etc/containers/registries.conf.d/unq-search.conf
+      echo "${_user}:10000:65536" | sudo tee /etc/subuid
+      echo "${_user}:10000:65536" | sudo tee /etc/subgid
+
+      podman system migrate
+      systemctl --user enable --now podman.service podman.socket
   - tests: |
       cd storage-pg
       make test
