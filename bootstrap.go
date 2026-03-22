@@ -1,4 +1,4 @@
-package sqlite
+package pg
 
 import (
 	"database/sql"
