@@ -2,21 +2,21 @@ package pg
 
 import (
 	"database/sql"
+	"strconv"
 
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
 	"github.com/go-ap/filters"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type Config struct {
-	User string
-	Pw   string
-	Host string
-	DB   string
-}
+type Config pgconn.Config
 
 func (c Config) DSN() string {
-	return "postgres://" + c.User + ":" + c.Pw + "@" + c.Host + "/" + c.DB + "?sslmode=disable"
+	if c.Port <= 0 {
+		return "postgres://" + c.User + ":" + c.Password + "@" + c.Host + "/" + c.Database + "?sslmode=disable"
+	}
+	return "postgres://" + c.User + ":" + c.Password + "@" + c.Host + ":" + strconv.Itoa(int(c.Port)) + "/" + c.Database + "?sslmode=disable"
 }
 
 type repo struct {
@@ -32,12 +32,12 @@ func New(c Config) (*repo, error) {
 }
 
 func (r *repo) Open() error {
-	return r.open()
+	return r.open(r.conf.DSN())
 }
 
-func (r *repo) open() error {
+func (r *repo) open(dsn string) error {
 	var err error
-	r.conn, err = sql.Open("postgres", r.conf.DSN())
+	r.conn, err = sql.Open("postgres", dsn)
 	return err
 }
 

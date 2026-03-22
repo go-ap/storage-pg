@@ -1,0 +1,3 @@
+-- CREATE USER storage;
+-- CREATE DATABASE storage;
+-- GRANT ALL PRIVILEGES ON DATABASE storage TO storage;

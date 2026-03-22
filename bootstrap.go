@@ -105,11 +105,13 @@ func Bootstrap(conf Config) error {
 	if dsn == "" {
 		return errInvalidConnection
 	}
+
 	r, err := New(conf)
 	if err != nil {
 		return err
 	}
-	if err = r.open(); err != nil {
+
+	if err = r.open(dsn); err != nil {
 		return err
 	}
 
