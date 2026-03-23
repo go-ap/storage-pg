@@ -41,28 +41,30 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 	if err != nil {
 		t.Fatalf("err getting connection string: %s", err)
 	}
-	//assert.NoError(t, err)
+
 	pconf, err := pgx.ParseConfig(connStr)
 	if err != nil {
 		t.Fatalf("err getting config: %s", err)
 	}
 
-	t.Skipf("we're not ready yet")
 	conf := Config{
+		Host:     pconf.Host,
+		Port:     pconf.Port,
+		Database: pconf.Database,
 		User:     pconf.User,
 		Password: pconf.Password,
-		Host:     pconf.Host,
-		Database: pconf.Database,
+		LogFn:    t.Logf,
+		ErrFn:    t.Logf,
 	}
+
 	if err := Bootstrap(conf); err != nil {
 		t.Fatalf("unable to bootstrap storage: %s", err)
 	}
+	t.Skipf("we're not ready yet")
 	storage, err := New(conf)
 	if err != nil {
 		t.Fatalf("unable to initialize storage: %s", err)
 	}
-	storage.errFn = t.Logf
-	storage.logFn = t.Logf
 
 	return storage
 }

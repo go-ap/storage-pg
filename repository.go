@@ -7,10 +7,21 @@ import (
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
 	"github.com/go-ap/filters"
-	"github.com/jackc/pgx/v5/pgconn"
+
+	// NOTE(marius): we're using the stdlib compatibility layer for the moment for pgx
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type Config pgconn.Config
+type Config struct {
+	Host     string // host (e.g. localhost) or absolute path to unix domain socket directory (e.g. /private/tmp)
+	Port     uint16
+	Database string
+	User     string
+	Password string
+
+	LogFn func(string, ...any)
+	ErrFn func(string, ...any)
+}
 
 func (c Config) DSN() string {
 	if c.Port <= 0 {
@@ -28,7 +39,13 @@ type repo struct {
 }
 
 func New(c Config) (*repo, error) {
-	return nil, errors.NotImplementedf("implement me!")
+	r := repo{
+		conn:  nil,
+		conf:  c,
+		logFn: c.LogFn,
+		errFn: c.ErrFn,
+	}
+	return &r, nil
 }
 
 func (r *repo) Open() error {
@@ -37,7 +54,7 @@ func (r *repo) Open() error {
 
 func (r *repo) open(dsn string) error {
 	var err error
-	r.conn, err = sql.Open("postgres", dsn)
+	r.conn, err = sql.Open("pgx", dsn)
 	return err
 }
 
