@@ -5,6 +5,11 @@ import (
 	"github.com/go-ap/errors"
 )
 
+type Metadata struct {
+	Pw         []byte
+	PrivateKey []byte
+}
+
 func (r *repo) LoadMetadata(iri vocab.IRI, m any) error {
 	return errors.NotImplementedf("implement me")
 }

@@ -11,7 +11,7 @@ import (
 
 const (
 	createImmutableTSFunc = `
-CREATE FUNCTION text2ts(text) RETURNS timestamp with time zone
+CREATE OR REPLACE FUNCTION text2ts(text) RETURNS timestamp with time zone
     LANGUAGE sql IMMUTABLE AS
 $$
     SELECT CASE WHEN $1 ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Zz]?$'
@@ -122,6 +122,11 @@ func Bootstrap(conf Config) error {
 	if err = r.open(dsn); err != nil {
 		return err
 	}
+	defer r.Close()
+
+	if err = r.conn.Ping(); err != nil {
+		return err
+	}
 
 	exec := func(conn *sql.DB, qRaw string, par ...any) error {
 		qSql := fmt.Sprintf(qRaw, par...)
@@ -163,9 +168,62 @@ func Bootstrap(conf Config) error {
 
 var errInvalidConnection = os.ErrNotExist
 
-func (r repo) Reset() {
+var tables = []string{
+	"objects", "collections",
+	"meta",
+	"client", "authorize", "access", "refresh",
 }
 
-func Clean(c Config) error {
+func (r *repo) Reset() {
+	if r.conn == nil {
+		r.errFn("connection is not open")
+		return
+	}
+	defer r.Close()
+
+	tx, err := r.conn.Begin()
+	if err != nil {
+		r.errFn("unable to start transaction: %s", err)
+		return
+	}
+	defer func() {
+		if err := tx.Commit(); err != nil {
+			r.errFn("unable to start transaction: %s", err)
+		}
+	}()
+
+	for _, table := range tables {
+		s := `TRUNCATE TABLE "` + table + `" CASCADE;`
+		_, err = tx.Exec(s)
+		if err != nil {
+			r.errFn("unable to truncate table %s: %s", table, err)
+		}
+	}
+}
+
+func Clean(conf Config) error {
+	dsn := conf.DSN()
+	if dsn == "" {
+		return errInvalidConnection
+	}
+
+	r, err := New(conf)
+	if err != nil {
+		return err
+	}
+
+	if err = r.open(dsn); err != nil {
+		return err
+	}
+	if err = r.conn.Ping(); err != nil {
+		return err
+	}
+	r.conn.Close()
+
+	for _, table := range tables {
+		if _, err = r.conn.Exec(`DROP TABLE "` + table + `"`); err != nil {
+			r.errFn("unable to drop table %s: %s", table, err)
+		}
+	}
 	return nil
 }

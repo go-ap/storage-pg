@@ -38,12 +38,22 @@ type repo struct {
 	errFn func(string, ...any)
 }
 
+func emptyLogFn(_ string, _ ...any) {
+
+}
+
 func New(c Config) (*repo, error) {
 	r := repo{
 		conn:  nil,
 		conf:  c,
-		logFn: c.LogFn,
-		errFn: c.ErrFn,
+		logFn: emptyLogFn,
+		errFn: emptyLogFn,
+	}
+	if c.LogFn != nil {
+		r.logFn = c.LogFn
+	}
+	if c.ErrFn != nil {
+		r.errFn = c.ErrFn
 	}
 	return &r, nil
 }
@@ -79,5 +89,9 @@ func (r *repo) RemoveFrom(colIRI vocab.IRI, items ...vocab.Item) error {
 }
 
 func (r *repo) Load(iri vocab.IRI, check ...filters.Check) (vocab.Item, error) {
+	return nil, errors.NotImplementedf("implement me")
+}
+
+func save(r *repo, it vocab.Item) (vocab.Item, error) {
 	return nil, errors.NotImplementedf("implement me")
 }

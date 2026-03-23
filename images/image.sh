@@ -2,7 +2,7 @@
 
 set -e
 
-_image=$(buildah from docker.io/library/postgres:18)
+_image=$(buildah from docker.io/library/postgres:18-alpine)
 
 buildah copy "${_image}" ./images/init-db.sql /docker-entrypoint-initdb.d/init-db.sql
 buildah copy "${_image}" ./images/init-user-db.sh /docker-entrypoint-initdb.d/init-user-db.sh

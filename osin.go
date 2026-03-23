@@ -6,12 +6,29 @@ import (
 )
 
 func (r *repo) Clone() osin.Storage {
+	r.conn = nil
 	return r
 }
 
+func (r *repo) close() error {
+	if r.conn == nil {
+		return nil
+	}
+	if err := r.conn.Close(); err != nil {
+		return err
+	}
+	r.conn = nil
+	return nil
+}
+
 func (r *repo) Close() {
-	//TODO implement me
-	panic("implement me")
+	if err := r.close(); err != nil {
+		r.errFn("unable to close connection %s", err)
+	}
+}
+
+func (r *repo) CreateClient(c osin.Client) error {
+	return errors.NotImplementedf("implement me")
 }
 
 func (r *repo) GetClient(id string) (osin.Client, error) {
