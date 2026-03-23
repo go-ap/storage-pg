@@ -19,9 +19,9 @@ $$
     END$$;
 `
 	createObjectsQuery = `
-CREATE TABLE objects (
+CREATE TABLE object (
   "raw" jsonb,
-  "iri" varchar NOT NULL constraint objects_key unique,
+  "iri" varchar NOT NULL constraint object_key unique,
   "id" varchar GENERATED ALWAYS AS (raw ->> 'id') STORED,
   "type" varchar GENERATED ALWAYS AS (raw ->> 'type') STORED ,
   "to" varchar GENERATED ALWAYS AS (raw ->> 'to') STORED ,
@@ -38,34 +38,35 @@ CREATE TABLE objects (
   "actor" varchar GENERATED ALWAYS AS (raw ->> 'actor') STORED ,
   "object" varchar GENERATED ALWAYS AS (raw ->> 'object') STORED 
 );
-CREATE INDEX objects_type ON objects(type);
-CREATE INDEX objects_names ON objects USING GIN (tsvector_concat(to_tsvector('english', name), to_tsvector('english', preferred_username)));
-CREATE INDEX objects_contents ON objects USING GIN (to_tsvector('english', summary)); 
--- CREATE INDEX objects_contents ON objects USING GIN (to_tsvector('english', content));
-CREATE INDEX objects_published ON objects(published);
+CREATE INDEX object_type ON object(type);
+CREATE INDEX object_names ON object USING GIN (tsvector_concat(to_tsvector('english', name), to_tsvector('english', preferred_username)));
+CREATE INDEX object_contents ON object USING GIN (to_tsvector('english', summary)); 
+-- CREATE INDEX object_contents ON object USING GIN (to_tsvector('english', content));
+CREATE INDEX object_published ON object(published);
 `
 
 	createMetaDataQuery = `CREATE TABLE "meta" (
   "id" varchar NOT NULL constraint meta_key unique,
-  "meta" jsonb
+  "meta" jsonb NOT NULL DEFAULT '{}'
 );`
 
 	createCollectionsQuery = `
-CREATE TABLE collections (
-  "id" varchar references objects(iri),
-  "iri" varchar,
+CREATE TABLE collection (
+  "id" varchar references object(iri),
+  "iri" varchar NOT NULL,
   "published" timestamptz default now()
 );
 
--- CREATE TRIGGER collections_updated_published AFTER UPDATE ON collections BEGIN
---   UPDATE collections SET published = strftime('%%Y-%%m-%%dT%%H:%%M:%%fZ') WHERE id = old.id;
--- END;`
+-- CREATE TRIGGER collections_updated_published AFTER UPDATE ON collection BEGIN
+-- UPDATE object SET updated = NOW() WHERE iri = old.id;
+-- END;
+`
 
 	createClientTable = `CREATE TABLE IF NOT EXISTS "client"(
 	"code" varchar constraint client_code_pkey PRIMARY KEY,
 	"secret" varchar NOT NULL,
 	"redirect_uri" varchar NOT NULL,
-	"extra" jsonb DEFAULT '{}'
+	"extra" jsonb NOT NULL DEFAULT '{}'
 );
 `
 
@@ -79,7 +80,7 @@ CREATE TABLE collections (
 	"code_challenge" varchar DEFAULT NULL,
 	"code_challenge_method" varchar DEFAULT NULL,
 	"created_at" timestamptz DEFAULT now(),
-	"extra" jsonb DEFAULT '{}'
+	"extra" jsonb NOT NULL DEFAULT '{}'
 );
 `
 
@@ -93,7 +94,7 @@ CREATE TABLE collections (
 	"scope" varchar DEFAULT NULL,
 	"redirect_uri" varchar NOT NULL,
 	"created_at" timestamptz DEFAULT now(),
-	"extra" varchar DEFAULT '{}'
+	"extra" jsonb NOT NULL DEFAULT '{}'
 );
 `
 
@@ -169,7 +170,7 @@ func Bootstrap(conf Config) error {
 var errInvalidConnection = os.ErrNotExist
 
 var tables = []string{
-	"objects", "collections",
+	"object", "collection",
 	"meta",
 	"client", "authorize", "access", "refresh",
 }

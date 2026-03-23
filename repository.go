@@ -2,6 +2,8 @@ package pg
 
 import (
 	"database/sql"
+	"net/url"
+	"path/filepath"
 	"strconv"
 
 	vocab "github.com/go-ap/activitypub"
@@ -34,13 +36,11 @@ type repo struct {
 	conn *sql.DB
 	conf Config
 
-	logFn func(string, ...any)
-	errFn func(string, ...any)
+	logFn loggerFn
+	errFn loggerFn
 }
 
-func emptyLogFn(_ string, _ ...any) {
-
-}
+var emptyLogFn loggerFn
 
 func New(c Config) (*repo, error) {
 	r := repo{
@@ -92,6 +92,80 @@ func (r *repo) Load(iri vocab.IRI, check ...filters.Check) (vocab.Item, error) {
 	return nil, errors.NotImplementedf("implement me")
 }
 
+var encodeItemFn = vocab.MarshalJSON
+var decodeItemFn = vocab.UnmarshalJSON
+
+type loggerFn func(string, ...any)
+
+func iriPath(iri vocab.IRI) string {
+	u, err := iri.URL()
+	if err != nil {
+		return ""
+	}
+
+	pieces := make([]string, 0)
+	if h := u.Host; h != "" {
+		pieces = append(pieces, h)
+	}
+	if p := u.Path; p != "" && p != "/" {
+		pieces = append(pieces, p)
+	}
+	if u.Fragment != "" {
+		pieces = append(pieces, url.PathEscape(u.Fragment))
+	}
+	return filepath.Join(pieces...)
+}
+
+var collectionPaths = append(filters.FedBOXCollections, append(vocab.OfActor, vocab.OfObject...)...)
+
+func isCollectionIRI(iri vocab.IRI) bool {
+	lst := vocab.CollectionPath(filepath.Base(iriPath(iri)))
+	return collectionPaths.Contains(lst)
+}
+
+const upsertObjectSQL = `INSERT INTO object (iri, raw) VALUES ($1, $2) 
+ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw;`
+
 func save(r *repo, it vocab.Item) (vocab.Item, error) {
-	return nil, errors.NotImplementedf("implement me")
+	if vocab.IsNil(it) {
+		return nil, nil
+	}
+
+	iri := it.GetLink()
+
+	raw, err := encodeItemFn(it)
+	if err != nil {
+		r.errFn("query error: %s", err)
+		return it, errors.Annotatef(err, "query error")
+	}
+	tx, err := r.conn.Begin()
+	if err != nil {
+		return nil, errors.Annotatef(err, "transaction start error")
+	}
+
+	params := []any{iri, raw}
+
+	st, err := tx.Prepare(upsertObjectSQL)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unable to prepare statement")
+	}
+	defer st.Close()
+
+	if _, err = st.Exec(params...); err != nil {
+		return it, errors.Annotatef(err, "query execution error")
+	}
+	//col, _ := path.Split(iri.String())
+	//if isCollectionIRI(vocab.IRI(col)) {
+	//	// Add private items to the collections table
+	//	if colIRI, k := vocab.Split(vocab.IRI(col)); k == "" {
+	//		if err = r.addTo(tx, colIRI, it); err != nil {
+	//			r.logFn("warning adding item: %s: %s", colIRI, err)
+	//		}
+	//	}
+	//}
+
+	if err = tx.Commit(); err != nil {
+		err = errors.Annotatef(err, "failed to commit transaction")
+	}
+	return it, err
 }

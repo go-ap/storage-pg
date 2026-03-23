@@ -71,7 +71,7 @@ func compareItemCollections(x, y interface{}) bool {
 var EquateItemCollections = cmp.FilterValues(areItemCollections, cmp.Comparer(compareItemCollections))
 
 func checkInsertedValue(t *testing.T, db *sql.DB, it vocab.Item) {
-	sel := "SELECT id, raw FROM objects WHERE id = ?;"
+	sel := "SELECT id, raw FROM object WHERE id = ?;"
 	res, err := db.Query(sel, it.GetLink())
 	if err != nil {
 		t.Errorf("unable to execute query %s", err)
@@ -214,7 +214,7 @@ var (
 func withMockItems(t *testing.T, r *repo) *repo {
 	for _, it := range mockItems {
 		if _, err := save(r, it); err != nil {
-			t.Errorf("unable to save item: %s: %s", it.GetLink(), err)
+			t.Errorf("unable to save item: %s: %+s", it.GetLink(), err)
 		}
 	}
 	return r
