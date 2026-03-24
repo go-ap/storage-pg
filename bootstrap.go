@@ -11,12 +11,13 @@ import (
 
 const (
 	createImmutableTSFunc = `
-CREATE OR REPLACE FUNCTION text2ts(text) RETURNS timestamp with time zone
-    LANGUAGE sql IMMUTABLE AS
+CREATE OR REPLACE FUNCTION text2ts(text) RETURNS timestamp with time zone LANGUAGE sql IMMUTABLE AS
 $$
-    SELECT CASE WHEN $1 ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[Zz]?$'
-       THEN CAST($1 AS timestamp with time zone) at time zone 'utc'
-    END$$;
+    SELECT CASE WHEN $1 ~ '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:.\d+)?' -- extract date-time part of the RFC3339 value
+        THEN CAST($1 AS timestamp with time zone) 
+            at time zone coalesce((regexp_match($1, '(Z|[+\-]?\d\d:\d\d)$'))[1], 'utc') -- extract tz part of the RFC3339 value
+    END
+$$;
 `
 	createObjectsQuery = `
 CREATE TABLE object (
@@ -66,7 +67,7 @@ CREATE TABLE collection (
 	"code" varchar constraint client_code_pkey PRIMARY KEY,
 	"secret" varchar NOT NULL,
 	"redirect_uri" varchar NOT NULL,
-	"extra" jsonb NOT NULL DEFAULT '{}'
+	"extra" varchar
 );
 `
 
@@ -80,7 +81,7 @@ CREATE TABLE collection (
 	"code_challenge" varchar DEFAULT NULL,
 	"code_challenge_method" varchar DEFAULT NULL,
 	"created_at" timestamptz DEFAULT now(),
-	"extra" jsonb NOT NULL DEFAULT '{}'
+	"extra" varchar
 );
 `
 
@@ -94,7 +95,7 @@ CREATE TABLE collection (
 	"scope" varchar DEFAULT NULL,
 	"redirect_uri" varchar NOT NULL,
 	"created_at" timestamptz DEFAULT now(),
-	"extra" jsonb NOT NULL DEFAULT '{}'
+	"extra" varchar
 );
 `
 

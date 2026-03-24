@@ -452,6 +452,13 @@ func Test_repo_Reset(t *testing.T) {
 			},
 			setupFns: []initFn{withOpenRoot, withBootstrap},
 		},
+		{
+			name: "not empty",
+			fields: fields{
+				Config: setupContainer(t),
+			},
+			setupFns: []initFn{withOpenRoot, withBootstrap, withClient, withAuthorization, withAccess, withMockItems},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
