@@ -6,11 +6,13 @@ require (
 	github.com/go-ap/activitypub v0.0.0-20260314162927-f37166117816
 	github.com/go-ap/errors v0.0.0-20260208110149-e1b309365966
 	github.com/go-ap/filters v0.0.0-20260318121108-558e05da8dfd
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260224104644-d108133388c0
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260324164352-216312df2896
+	github.com/google/go-cmp v0.7.0
+	github.com/jackc/pgx/v5 v5.9.1
 	github.com/openshift/osin v1.0.2-0.20210113124101-8612686d6dda
 	github.com/testcontainers/testcontainers-go v0.41.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.41.0
+	golang.org/x/crypto v0.49.0
 )
 
 require (
@@ -44,7 +46,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -91,11 +92,10 @@ require (
 	go.opentelemetry.io/otel v1.41.0 // indirect
 	go.opentelemetry.io/otel/metric v1.41.0 // indirect
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/term v0.41.0 // indirect
 	golang.org/x/text v0.35.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	google.golang.org/grpc v1.79.1 // indirect

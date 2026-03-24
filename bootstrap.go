@@ -80,13 +80,13 @@ CREATE TABLE collection (
 	"state" varchar,
 	"code_challenge" varchar DEFAULT NULL,
 	"code_challenge_method" varchar DEFAULT NULL,
-	"created_at" timestamptz DEFAULT now(),
+	"created_at" timestamptz DEFAULT (now() at time zone 'utc'),
 	"extra" varchar
 );
 `
 
 	createAccessTable = `CREATE TABLE IF NOT EXISTS "access" (
-    "token" varchar constraint access_token_pkey PRIMARY KEY,
+	"token" varchar constraint access_token_pkey PRIMARY KEY,
 	"client" varchar REFERENCES client(code),
 	"authorize" varchar REFERENCES authorize(code),
 	"previous" varchar,
@@ -94,14 +94,14 @@ CREATE TABLE collection (
 	"expires_in" INTEGER,
 	"scope" varchar DEFAULT NULL,
 	"redirect_uri" varchar NOT NULL,
-	"created_at" timestamptz DEFAULT now(),
+	"created_at" timestamptz DEFAULT (now() at time zone 'utc'),
 	"extra" varchar
 );
 `
 
 	createRefreshTable = `CREATE TABLE IF NOT EXISTS "refresh" (
 	"token" varchar PRIMARY KEY NOT NULL,
-	"access_token" varchar NOT NULL REFERENCES access(token)
+	"access_token" varchar NOT NULL REFERENCES access(token) ON DELETE CASCADE 
 );
 `
 )
