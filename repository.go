@@ -69,7 +69,14 @@ func (r *repo) open(dsn string) error {
 }
 
 func (r *repo) Save(it vocab.Item) (vocab.Item, error) {
-	return nil, errors.NotImplementedf("implement me")
+	if r == nil || r.conn == nil {
+		return nil, errInvalidConnection
+	}
+	if vocab.IsNil(it) {
+		return nil, errors.Newf("Unable to save nil element")
+	}
+
+	return r.save(it)
 }
 
 func (r *repo) Delete(it vocab.Item) error {
@@ -126,7 +133,7 @@ func isCollectionIRI(iri vocab.IRI) bool {
 const upsertObjectSQL = `INSERT INTO object (iri, raw) VALUES ($1, $2) 
 ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw;`
 
-func save(r *repo, it vocab.Item) (vocab.Item, error) {
+func (r *repo) save(it vocab.Item) (vocab.Item, error) {
 	if vocab.IsNil(it) {
 		return nil, nil
 	}
