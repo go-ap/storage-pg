@@ -14,7 +14,7 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 	if err := Bootstrap(conf); err != nil {
 		t.Fatalf("unable to bootstrap storage: %s", err)
 	}
-	t.Skipf("we're not ready yet")
+
 	storage, err := New(conf)
 	if err != nil {
 		t.Fatalf("unable to initialize storage: %s", err)
@@ -24,8 +24,12 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 }
 
 func Test_Conformance(t *testing.T) {
-	conformance.Suite(
-		conformance.TestActivityPub, conformance.TestMetadata,
-		conformance.TestKey, conformance.TestOAuth, conformance.TestPassword,
-	).Run(t, initStorage(t))
+	conformance.Suite(conformance.TestMetadata, conformance.TestKey, conformance.TestPassword).
+		Run(t, initStorage(t))
+}
+
+func Test_ConformanceFailing(t *testing.T) {
+	t.Skipf("ActivityPub and OAuth tests are not ready")
+	conformance.Suite(conformance.TestActivityPub, conformance.TestOAuth).
+		Run(t, initStorage(t))
 }
