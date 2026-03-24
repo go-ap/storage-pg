@@ -46,11 +46,6 @@ CREATE INDEX object_contents ON object USING GIN (to_tsvector('english', summary
 CREATE INDEX object_published ON object(published);
 `
 
-	createMetaDataQuery = `CREATE TABLE "meta" (
-  "id" varchar NOT NULL constraint meta_key unique,
-  "meta" jsonb NOT NULL DEFAULT '{}'
-);`
-
 	createCollectionsQuery = `
 CREATE TABLE collection (
   "id" varchar references object(iri),
@@ -62,6 +57,11 @@ CREATE TABLE collection (
 -- UPDATE object SET updated = NOW() WHERE iri = old.id;
 -- END;
 `
+
+	createMetaDataQuery = `CREATE TABLE "meta" (
+  "iri" varchar NOT NULL constraint meta_key unique,
+  "raw" jsonb NOT NULL DEFAULT '{}'
+);`
 
 	createClientTable = `CREATE TABLE IF NOT EXISTS "client"(
 	"code" varchar constraint client_code_pkey PRIMARY KEY,
