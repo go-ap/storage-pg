@@ -31,9 +31,9 @@ func areErrors(a, b any) bool {
 	return ok1 && ok2
 }
 
-func compareErrors(x, y interface{}) bool {
-	xe := x.(error)
-	ye := y.(error)
+func compareErrors(x, y any) bool {
+	xe, _ := x.(error)
+	ye, _ := y.(error)
 	if errors.Is(xe, ye) || errors.Is(ye, xe) {
 		return true
 	}
@@ -404,7 +404,7 @@ func TestBootstrap(t *testing.T) {
 		{
 			name:    "empty",
 			arg:     Config{},
-			wantErr: fmt.Errorf("failed to connect to `user= database=`: /tmp/.s.PGSQL.5432 (/tmp): dial error: dial unix /tmp/.s.PGSQL.5432: connect: no such file or directory"),
+			wantErr: fmt.Errorf("failed to connect to `user=test-pg database=`: /tmp/.s.PGSQL.5432 (/tmp): dial error: dial unix /tmp/.s.PGSQL.5432: connect: no such file or directory"),
 		},
 		{
 			name: "regular setup",
@@ -413,6 +413,8 @@ func TestBootstrap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// NOTE(marius): we set PGUSER to match the error message for an empty config
+			_ = os.Setenv("PGUSER", "test-pg")
 			if err := Bootstrap(tt.arg); !cmp.Equal(err, tt.wantErr, EquateWeakErrors) {
 				t.Fatalf("Bootstrap() error = %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
 			}
@@ -429,7 +431,7 @@ func TestClean(t *testing.T) {
 		{
 			name:    "empty",
 			arg:     Config{},
-			wantErr: fmt.Errorf("failed to connect to `user= database=`: /tmp/.s.PGSQL.5432 (/tmp): dial error: dial unix /tmp/.s.PGSQL.5432: connect: no such file or directory"),
+			wantErr: fmt.Errorf("failed to connect to `user=test-pg database=`: /tmp/.s.PGSQL.5432 (/tmp): dial error: dial unix /tmp/.s.PGSQL.5432: connect: no such file or directory"),
 		},
 		{
 			name:    "config",
@@ -439,6 +441,8 @@ func TestClean(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// NOTE(marius): we set PGUSER to match the error message for an empty config
+			_ = os.Setenv("PGUSER", "test-pg")
 			if err := Clean(tt.arg); !cmp.Equal(err, tt.wantErr, EquateWeakErrors) {
 				t.Errorf("Clean() error = %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
 			}

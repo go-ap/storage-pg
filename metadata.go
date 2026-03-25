@@ -189,7 +189,7 @@ func loadMetadataFromTable(conn *sql.DB, iri vocab.IRI) ([]byte, error) {
 }
 
 func saveMetadataToTable(conn *sql.DB, iri vocab.IRI, m []byte) error {
-	query := "INSERT INTO meta (iri, raw) VALUES($1, $2) ON CONFLICT ON CONSTRAINT meta_key DO UPDATE SET raw = excluded.raw;;"
+	query := "INSERT INTO meta (iri, raw) VALUES($1, $2) ON CONFLICT ON CONSTRAINT meta_key DO UPDATE SET raw = excluded.raw;"
 	_, err := conn.Exec(query, iri, string(m))
 	return err
 }
