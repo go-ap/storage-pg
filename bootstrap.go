@@ -50,7 +50,7 @@ CREATE INDEX object_published ON object(published);
 CREATE TABLE collection (
   "id" varchar references object(iri),
   "iri" varchar NOT NULL,
-  "published" timestamptz default now()
+  "added" timestamptz default now()
 );
 
 -- CREATE TRIGGER collections_updated_published AFTER UPDATE ON collection BEGIN
@@ -181,25 +181,23 @@ func (r *repo) Reset() {
 		r.errFn("connection is not open")
 		return
 	}
-	defer r.Close()
 
 	tx, err := r.conn.Begin()
 	if err != nil {
 		r.errFn("unable to start transaction: %s", err)
 		return
 	}
-	defer func() {
-		if err := tx.Commit(); err != nil {
-			r.errFn("unable to start transaction: %s", err)
-		}
-	}()
 
 	for _, table := range tables {
 		s := `TRUNCATE TABLE "` + table + `" CASCADE;`
-		_, err = tx.Exec(s)
-		if err != nil {
+		if _, err = tx.Exec(s); err != nil {
+			_ = tx.Rollback()
 			r.errFn("unable to truncate table %s: %s", table, err)
 		}
+	}
+	if err := tx.Commit(); err != nil {
+		_ = tx.Rollback()
+		r.errFn("unable to commit transaction item: %+s", err)
 	}
 }
 
@@ -220,7 +218,7 @@ func Clean(conf Config) error {
 	if err = r.conn.Ping(); err != nil {
 		return err
 	}
-	r.conn.Close()
+	defer r.Close()
 
 	for _, table := range tables {
 		if _, err = r.conn.Exec(`DROP TABLE "` + table + `"`); err != nil {

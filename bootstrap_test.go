@@ -165,10 +165,8 @@ func withBootstrap(t *testing.T, r *repo) *repo {
 }
 
 func withCleanup(t *testing.T, r *repo) *repo {
-	if err := Clean(r.conf); err != nil {
-		t.Errorf("unable to clean repository %s: %+v", r.conf.DSN(), err)
-	}
-	return r
+	r.Reset()
+	return nil
 }
 
 func withOpenRoot(t *testing.T, r *repo) *repo {
@@ -219,12 +217,7 @@ var (
 )
 
 func withMockItems(t *testing.T, r *repo) *repo {
-	for _, it := range mockItems {
-		if _, err := r.save(it); err != nil {
-			t.Errorf("unable to save item: %s: %+s", it.GetLink(), err)
-		}
-	}
-	return r
+	return withItems(mockItems)(t, r)
 }
 
 func withMetadataJDoe(t *testing.T, r *repo) *repo {
@@ -363,12 +356,23 @@ func withGeneratedRoot(root vocab.Item) initFn {
 	}
 }
 
-func withGeneratedItems(items vocab.ItemCollection) initFn {
+func withItems(items vocab.ItemCollection) initFn {
 	return func(t *testing.T, r *repo) *repo {
+		tx, err := r.conn.Begin()
+		if err != nil {
+			t.Errorf("unable to start transaction item: %+s", err)
+			return r
+		}
 		for _, it := range items {
-			if _, err := r.save(it); err != nil {
+			if it, err = r.save(tx, it); err != nil {
+				_ = tx.Rollback()
 				t.Errorf("unable to save %T[%s]: %s", it, it.GetLink(), err)
 			}
+		}
+		if err = tx.Commit(); err != nil {
+			_ = tx.Rollback()
+			t.Errorf("unable to commit transaction item: %+s", err)
+			return r
 		}
 		return r
 	}
@@ -476,29 +480,25 @@ func Test_repo_Reset(t *testing.T) {
 			r := mockRepo(t, tt.fields, tt.setupFns...)
 			t.Cleanup(r.Close)
 
-			// Reset closes the db
+			if r.conn == nil {
+				_ = r.Open()
+				t.Cleanup(r.Close)
+			}
+
 			r.Reset()
 
 			for _, table := range tables {
-				if r.conn != nil {
-					t.Errorf("Reset() left db connection open")
-				}
-				_ = r.Open()
-
 				var count sql.NullInt32
-				err := r.conn.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %q WHERE true", table)).Scan(&count)
-				if err != nil {
-					t.Errorf("Reset() left table in invalid state: %s", err)
-					return
+				query := fmt.Sprintf("SELECT COUNT(*) FROM %q WHERE true", table)
+				if err := r.conn.QueryRow(query).Scan(&count); err != nil {
+					t.Fatalf("Reset() left table in invalid state: %s", err)
 				}
 				if !count.Valid {
-					t.Errorf("Reset() left table in invalid state: %v", count)
-					return
+					t.Fatalf("Reset() left table in invalid state: %v", count)
 				}
 				if count.Int32 > 0 {
 					t.Errorf("Reset() left table with existing rows: %d", count.Int32)
 				}
-				r.Close()
 			}
 		})
 	}
