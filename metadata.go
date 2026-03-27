@@ -180,16 +180,20 @@ func (r *repo) SaveKey(iri vocab.IRI, key crypto.PrivateKey) (*vocab.PublicKey, 
 	}, nil
 }
 
+const selectMetadataSQL = `SELECT raw FROM meta WHERE iri = $1;`
+
 func loadMetadataFromTable(conn *sql.DB, iri vocab.IRI) ([]byte, error) {
 	var meta []byte
-	if err := conn.QueryRow("SELECT raw FROM meta WHERE iri = $1;", iri).Scan(&meta); err != nil {
+	if err := conn.QueryRow(selectMetadataSQL, iri).Scan(&meta); err != nil {
 		return nil, errors.Annotatef(err, "query execution error")
 	}
 	return meta, nil
 }
 
+const upsertMetaDataSQL = `INSERT INTO meta (iri, raw) VALUES($1, $2) 
+ON CONFLICT ON CONSTRAINT meta_key DO UPDATE SET raw = excluded.raw;`
+
 func saveMetadataToTable(conn *sql.DB, iri vocab.IRI, m []byte) error {
-	query := "INSERT INTO meta (iri, raw) VALUES($1, $2) ON CONFLICT ON CONSTRAINT meta_key DO UPDATE SET raw = excluded.raw;"
-	_, err := conn.Exec(query, iri, string(m))
+	_, err := conn.Exec(upsertMetaDataSQL, iri, string(m))
 	return err
 }

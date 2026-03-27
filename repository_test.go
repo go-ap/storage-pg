@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	vocab "github.com/go-ap/activitypub"
-	"github.com/go-ap/errors"
 	conformance "github.com/go-ap/storage-conformance-suite"
 	"github.com/google/go-cmp/cmp"
 )
@@ -33,7 +32,7 @@ func Test_repo_Save(t *testing.T) {
 			name:     "empty item can't be saved",
 			fields:   fields{Config: conf},
 			setupFns: []initFn{withOpenRoot, withBootstrap},
-			wantErr:  errors.Newf("Unable to save nil element"),
+			wantErr:  errNilItem,
 		},
 		{
 			name:     "save item collection",
