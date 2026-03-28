@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/go-ap/activitypub v0.0.0-20260314162927-f37166117816
 	github.com/go-ap/errors v0.0.0-20260208110149-e1b309365966
-	github.com/go-ap/filters v0.0.0-20260327095018-65f07dfa0472
+	github.com/go-ap/filters v0.0.0-20260328181847-04f48e937492
 	github.com/go-ap/storage-conformance-suite v0.0.0-20260324164352-216312df2896
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.9.1
@@ -57,7 +57,6 @@ require (
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
-	github.com/mariusor/qstring v0.0.0-20200204164351-5a99d46de39d // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
 	github.com/mattn/goveralls v0.0.12 // indirect

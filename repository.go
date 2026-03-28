@@ -458,7 +458,7 @@ func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab
 	s.Select("o.id")
 	s.Select("o.raw")
 	s.Join("collection c", "c.iri = o.iri")
-	_ = filters.BuildSQL(s, ff...)
+	_ = filters.SQLBuild(s, ff...)
 	s.Where("c.id = ?", iri)
 
 	query := s.String()
