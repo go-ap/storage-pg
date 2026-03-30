@@ -29,13 +29,13 @@ CREATE TABLE object (
   "bto" varchar GENERATED ALWAYS AS (raw ->> 'bto') STORED ,
   "cc" varchar GENERATED ALWAYS AS (raw ->> 'cc') STORED ,
   "bcc" varchar GENERATED ALWAYS AS (raw ->> 'bcc') STORED ,
-  "published" timestamp GENERATED ALWAYS AS (text2ts(raw ->> 'published')) STORED ,
+  "published" timestamptz GENERATED ALWAYS AS (text2ts(raw ->> 'published')) STORED,
   "updated" timestamptz GENERATED ALWAYS AS (text2ts(raw ->> 'updated')) STORED ,
   "url" varchar GENERATED ALWAYS AS (raw ->> 'url') STORED ,
-  "name" text GENERATED ALWAYS AS (raw ->> 'name') STORED ,
+  "name" varchar GENERATED ALWAYS AS (raw ->> 'name') STORED ,
   "preferred_username" text GENERATED ALWAYS AS (raw ->> 'preferredUsername') STORED ,
-  "summary" text GENERATED ALWAYS AS (raw ->> 'summary') STORED ,
-  "content" text GENERATED ALWAYS AS (raw ->> 'content') STORED ,
+  "summary" varchar GENERATED ALWAYS AS (raw ->> 'summary') STORED ,
+  "content" varchar GENERATED ALWAYS AS (raw ->> 'content') STORED ,
   "actor" varchar GENERATED ALWAYS AS (raw ->> 'actor') STORED ,
   "object" varchar GENERATED ALWAYS AS (raw ->> 'object') STORED 
 );
@@ -50,7 +50,7 @@ CREATE INDEX object_published ON object(published);
 CREATE TABLE collection (
   "id" varchar references object(iri),
   "iri" varchar NOT NULL,
-  "added" timestamptz default now()
+  "added" timestamptz default (now() at time zone 'utc')
 );
 
 -- CREATE TRIGGER collections_updated_published AFTER UPDATE ON collection BEGIN

@@ -24,12 +24,6 @@ func initStorage(t *testing.T) conformance.ActivityPubStorage {
 }
 
 func Test_Conformance(t *testing.T) {
-	conformance.Suite(conformance.TestMetadata, conformance.TestOAuth, conformance.TestPassword).
-		Run(t, initStorage(t))
-}
-
-func Test_ConformanceFailing(t *testing.T) {
-	t.Skipf("ActivityPub and OAuth tests are not ready")
-	conformance.Suite(conformance.TestActivityPub, conformance.TestKey).
-		Run(t, initStorage(t))
+	conformance.Suite(conformance.TestActivityPub, conformance.TestMetadata,
+		conformance.TestOAuth, conformance.TestPassword, conformance.TestKey).Run(t, initStorage(t))
 }

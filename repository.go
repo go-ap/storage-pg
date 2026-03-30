@@ -362,16 +362,19 @@ func cleanIRI(i vocab.IRI) vocab.IRI {
 
 const selOneQ = "SELECT id, raw FROM object WHERE id = $1;"
 
-func loadSingleObject(tx preparer, f vocab.IRI) (vocab.Item, error) {
+func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 	st, err := tx.Prepare(selOneQ)
 	if err != nil {
-		return nil, errors.Annotatef(err, "unable to load object %s", f)
+		return nil, errors.Annotatef(err, "unable to load object %s", iri)
 	}
 	defer st.Close()
 
-	rows, err := st.Query(cleanIRI(f))
+	rows, err := st.Query(cleanIRI(iri))
 	if err != nil {
-		return nil, errors.Annotatef(err, "unable to load object %s", f)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.NotFoundf("Unable to load %s", iri)
+		}
+		return nil, errors.Annotatef(err, "unable to load object %s", iri)
 	}
 	defer rows.Close()
 
@@ -392,7 +395,7 @@ func loadSingleObject(tx preparer, f vocab.IRI) (vocab.Item, error) {
 			}
 		}
 		if vocab.IsNil(it) {
-			return nil, errors.Annotatef(errNilItem, "IRI %s", f)
+			return nil, errors.Annotatef(errNilItem, "IRI %s", iri)
 		}
 		it = loadFirstLevelProperties(tx, it)
 	}
@@ -458,17 +461,15 @@ func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab
 	s.Select("o.id")
 	s.Select("o.raw")
 	s.Join("collection c", "c.iri = o.iri")
-	_ = filters.SQLBuild(s, ff...)
+	_ = filters.SQLWhere(s, ff...)
 	s.Where("c.id = ?", iri)
+	//s.OrderBy("COALESCE(o.published, c.added) DESC")
 
 	query := s.String()
 	args := s.Args()
 	st, err := tx.Prepare(query)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.NotFoundf("Unable to load %s", iri)
-		}
-		return nil, errors.Annotatef(err, "unable to run select")
+		return nil, errors.Annotatef(err, "unable to prepare query")
 	}
 	defer st.Close()
 

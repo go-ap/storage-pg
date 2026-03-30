@@ -61,8 +61,8 @@ func Test_repo_Save(t *testing.T) {
 				t.Errorf("Save() error = %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
 				return
 			}
-			if !cmp.Equal(got, tt.want) {
-				t.Errorf("Save() got = %s", cmp.Diff(tt.want, got))
+			if !cmp.Equal(got, tt.want, conformance.EquateItems) {
+				t.Errorf("Save() got = %s", cmp.Diff(tt.want, got, conformance.EquateItems))
 			}
 		})
 	}

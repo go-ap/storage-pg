@@ -51,8 +51,8 @@ func areItemCollections(a, b any) bool {
 }
 
 func compareItemCollections(x, y interface{}) bool {
-	var i1 vocab.Item
-	var i2 vocab.Item
+	var i1 vocab.ItemCollection
+	var i2 vocab.ItemCollection
 	if ic1, ok := x.(vocab.ItemCollection); ok {
 		i1 = ic1
 	}
@@ -65,7 +65,7 @@ func compareItemCollections(x, y interface{}) bool {
 	if ic2, ok := y.(*vocab.ItemCollection); ok {
 		i2 = *ic2
 	}
-	return vocab.ItemsEqual(i1, i2)
+	return i1.Equal(i2)
 }
 
 var EquateItemCollections = cmp.FilterValues(areItemCollections, cmp.Comparer(compareItemCollections))
