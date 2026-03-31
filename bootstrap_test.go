@@ -145,7 +145,6 @@ func setupContainer(t *testing.T) Config {
 		Database: pconf.Database,
 		User:     pconf.User,
 		Password: pconf.Password,
-		LogFn:    t.Logf,
 		ErrFn:    t.Logf,
 	}
 }

@@ -76,7 +76,7 @@ func (r *repo) PasswordSet(iri vocab.IRI, pw []byte) error {
 		return errors.Newf("could not generate hash for nil pw")
 	}
 	if len(iri) == 0 {
-		return errors.NotFoundf("not found")
+		return errNotFound
 	}
 
 	m := new(Metadata)

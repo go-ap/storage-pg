@@ -2,11 +2,9 @@ package pg
 
 import (
 	"database/sql"
-	"fmt"
 	"net/url"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
@@ -43,7 +41,7 @@ type repo struct {
 	errFn loggerFn
 }
 
-var emptyLogFn loggerFn
+func emptyLogFn(_ string, _ ...any) {}
 
 func New(c Config) (*repo, error) {
 	r := repo{
@@ -125,25 +123,22 @@ func (r *repo) Delete(it vocab.Item) error {
 	return nil
 }
 
-const delSingleFmt = "DELETE FROM object where iri IN (%s);"
-
 func (r *repo) delete(tx *sql.Tx, items ...vocab.Item) error {
 	if len(items) == 0 {
 		return nil
 	}
 
-	attrs := make([]string, 0, len(items))
 	params := make([]any, 0, len(items))
-	for i, it := range items {
+	for _, it := range items {
 		if vocab.IsNil(it) {
 			continue
 		}
-		attrs = append(attrs, "$"+strconv.Itoa(i+1))
 		params = append(params, it.GetLink())
 	}
 
-	query := fmt.Sprintf(delSingleFmt, strings.Join(attrs, ","))
-	st, err := tx.Prepare(query)
+	q := pgs.DeleteFrom("object")
+	q.Where("iri").In(params...)
+	st, err := tx.Prepare(q.String())
 	if err != nil {
 		return errors.Annotatef(err, "unable to prepare statement")
 	}
@@ -181,9 +176,15 @@ func (r *repo) Create(col vocab.CollectionInterface) (vocab.CollectionInterface,
 	return col, nil
 }
 
+var errInvalidCollection = errors.Errorf("invalid collection IRI")
+
 func (r *repo) AddTo(col vocab.IRI, items ...vocab.Item) error {
 	if r == nil || r.conn == nil {
 		return errInvalidConnection
+	}
+
+	if col == "" {
+		return errInvalidCollection
 	}
 
 	tx, err := r.conn.Begin()
@@ -299,9 +300,6 @@ func isCollectionIRI(iri vocab.IRI) bool {
 	return collectionPaths.Contains(lst)
 }
 
-const upsertObjectSQL = `INSERT INTO object (iri, raw) VALUES ($1, $2) 
-ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw;`
-
 func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
 	if vocab.IsNil(it) {
 		return nil, nil
@@ -311,19 +309,20 @@ func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
 
 	raw, err := encodeItemFn(it)
 	if err != nil {
-		r.errFn("query error: %s", err)
 		return it, errors.Annotatef(err, "query error")
 	}
 
-	params := []any{iri, raw}
-
-	st, err := tx.Prepare(upsertObjectSQL)
+	q := pgs.InsertInto("object").
+		Set("iri", iri).
+		Set("raw", raw).
+		Clause("ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw")
+	st, err := tx.Prepare(q.String())
 	if err != nil {
 		return nil, errors.Annotatef(err, "unable to prepare statement")
 	}
 	defer st.Close()
 
-	if _, err = st.Exec(params...); err != nil {
+	if _, err = st.Exec(q.Args()...); err != nil {
 		return it, errors.Annotatef(err, "query execution error")
 	}
 
@@ -333,7 +332,7 @@ func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
 		// Add private items to the collections table
 		if colIRI, k := vocab.Split(vocab.IRI(col)); k == "" {
 			if err = r.addTo(tx, colIRI, it); err != nil {
-				r.logFn("warning adding item: %s: %s", colIRI, err)
+				r.logFn("failed adding item to collection: %s: %s", colIRI, err)
 			}
 		}
 	}
@@ -400,7 +399,7 @@ func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 		it = loadFirstLevelProperties(tx, it)
 	}
 	if vocab.IsNil(it) {
-		return nil, errors.NotFoundf("not found")
+		return nil, errNotFound
 	}
 
 	return it, nil
@@ -511,7 +510,7 @@ func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab
 		return ret, errors.Join(errs...)
 	}
 	if len(ret) == 0 {
-		return ret, errors.NotFoundf("not found")
+		return ret, errNotFound
 	}
 
 	err = vocab.OnItem(ret, func(item vocab.Item) error {
@@ -557,46 +556,45 @@ func loadFromDb(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.Item
 }
 
 var errNilItem = errors.Errorf("nil item")
+var errNotFound = errors.NotFoundf("not found")
 
 func (r *repo) addTo(tx *sql.Tx, col vocab.IRI, items ...vocab.Item) error {
 	if len(items) == 0 {
 		return nil
 	}
 
-	addToCollectionFmt := "INSERT INTO collection (id, iri) VALUES %s;"
-
-	params := make([]any, 0, len(items)*2)
-	args := make([]string, 0, len(items))
-	for i, it := range items {
+	q := pgs.InsertInto("collection")
+	for _, it := range items {
 		if vocab.IsNil(it) {
 			return errNilItem
 		}
 
-		if vocab.IsIRI(it) {
-			ob, err := loadSingleObject(tx, it.GetLink())
-			if err != nil {
-				return err
+		ob, err := loadSingleObject(tx, it.GetLink())
+		if err != nil {
+			if it, err = r.save(tx, it); err != nil {
+				return errors.Annotatef(err, "unable to save item")
 			}
-			it = ob
+			if vocab.IsIRI(it) {
+				it = ob
+			}
+		}
+		if vocab.IsNil(it) {
+			return errNotFound
 		}
 
-		var err error
-		if it, err = r.save(tx, it); err != nil {
-			return errors.Annotatef(err, "unable to save item")
-		}
-
-		args = append(args, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
-		params = append(params, col, it.GetLink())
+		q.NewRow().
+			Set("id", col).
+			Set("iri", it.GetLink())
 	}
 
-	query := fmt.Sprintf(addToCollectionFmt, strings.Join(args, ","))
-	st, err := tx.Prepare(query)
+	st, err := tx.Prepare(q.String())
 	if err != nil {
 		return errors.Annotatef(err, "unable to prepare statement")
 	}
 	defer st.Close()
 
-	if _, err := st.Exec(params...); err != nil {
+	args := q.Args()
+	if _, err := st.Exec(args...); err != nil {
 		return errors.Annotatef(err, "unable to append item to collection")
 	}
 
@@ -606,7 +604,7 @@ func (r *repo) addTo(tx *sql.Tx, col vocab.IRI, items ...vocab.Item) error {
 		return err
 	}
 	_ = vocab.OnCollection(colOb, func(col *vocab.Collection) error {
-		col.TotalItems = uint(len(params) / 2)
+		col.TotalItems = uint(len(args) / 2)
 		_, err = r.save(tx, col)
 		return err
 	})

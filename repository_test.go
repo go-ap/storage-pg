@@ -67,3 +67,77 @@ func Test_repo_Save(t *testing.T) {
 		})
 	}
 }
+
+func Test_repo_AddTo(t *testing.T) {
+	conf := setupContainer(t)
+	type args struct {
+		col   vocab.IRI
+		items []vocab.Item
+	}
+	tests := []struct {
+		name     string
+		setupFns []initFn
+		fields   fields
+		args     args
+		wantErr  error
+	}{
+		{
+			name:    "empty",
+			args:    args{},
+			wantErr: errInvalidConnection,
+		},
+		{
+			name: "with config",
+			fields: fields{
+				Config: conf,
+			},
+			wantErr: errInvalidConnection,
+		},
+		{
+			name:     "empty collection IRI",
+			setupFns: []initFn{withOpenRoot, withBootstrap},
+			fields:   fields{Config: conf},
+			args:     args{},
+			wantErr:  errInvalidCollection,
+		},
+		{
+			name:     "nil items to add",
+			setupFns: []initFn{withOpenRoot, withCleanup},
+			fields:   fields{Config: conf},
+			args: args{
+				col:   "https://example.com/invalid-collection",
+				items: nil,
+			},
+			wantErr: nil,
+		},
+		{
+			name:     "nil item to add",
+			setupFns: []initFn{withOpenRoot, withCleanup},
+			fields:   fields{Config: conf},
+			args: args{
+				col:   "https://example.com/invalid-collection",
+				items: vocab.ItemCollection{vocab.Item(nil)},
+			},
+			wantErr: errNilItem,
+		},
+		{
+			name:     "IRI to add to invalid collection",
+			setupFns: []initFn{withOpenRoot, withCleanup},
+			fields:   fields{Config: conf},
+			args: args{
+				col:   "https://example.com/invalid-collection",
+				items: vocab.ItemCollection{vocab.IRI("https://example.com")},
+			},
+			wantErr: errNotFound,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := mockRepo(t, tt.fields, tt.setupFns...)
+			t.Cleanup(r.Close)
+			if err := r.AddTo(tt.args.col, tt.args.items...); !cmp.Equal(err, tt.wantErr, EquateWeakErrors) {
+				t.Errorf("AddTo() error = %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
+			}
+		})
+	}
+}

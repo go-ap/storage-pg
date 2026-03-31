@@ -141,31 +141,15 @@ func Bootstrap(conf Config) error {
 		return nil
 	}
 
-	if err := exec(r.conn, createImmutableTSFunc); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createObjectsQuery); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createCollectionsQuery); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createMetaDataQuery); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createClientTable); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createAuthorizeTable); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createAccessTable); err != nil {
-		return err
-	}
-	if err := exec(r.conn, createRefreshTable); err != nil {
-		return err
-	}
-	return nil
+	err = exec(r.conn, createImmutableTSFunc)
+	err = exec(r.conn, createObjectsQuery)
+	err = exec(r.conn, createCollectionsQuery)
+	err = exec(r.conn, createMetaDataQuery)
+	err = exec(r.conn, createClientTable)
+	err = exec(r.conn, createAuthorizeTable)
+	err = exec(r.conn, createAccessTable)
+	err = exec(r.conn, createRefreshTable)
+	return err
 }
 
 var errInvalidConnection = os.ErrNotExist
@@ -221,7 +205,7 @@ func Clean(conf Config) error {
 	defer r.Close()
 
 	for _, table := range tables {
-		if _, err = r.conn.Exec(`DROP TABLE "` + table + `"`); err != nil {
+		if _, err = r.conn.Exec(`DROP TABLE IF EXISTS "` + table + `" CASCADE`); err != nil {
 			r.errFn("unable to drop table %s: %s", table, err)
 		}
 	}

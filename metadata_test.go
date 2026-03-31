@@ -36,14 +36,14 @@ func Test_repo_LoadKey(t *testing.T) {
 			name:     "empty IRI is not found",
 			fields:   fields{Config: conf},
 			setupFns: []initFn{withOpenRoot, withBootstrap, withMockItems},
-			wantErr:  errors.NotFoundf("not found"),
+			wantErr:  errNotFound,
 		},
 		{
 			name:     "~jdoe without metadata",
 			fields:   fields{Config: conf},
 			setupFns: []initFn{withOpenRoot, withCleanup, withMockItems},
 			iri:      "https://example.com/~jdoe",
-			wantErr:  errors.NotFoundf("not found"),
+			wantErr:  errNotFound,
 		},
 		{
 			name:     "~jdoe with metadata",
@@ -94,7 +94,7 @@ func Test_repo_LoadMetadata(t *testing.T) {
 			name:     "empty args is not found",
 			fields:   fields{Config: conf},
 			setupFns: []initFn{withOpenRoot, withBootstrap, withMockItems},
-			wantErr:  errors.NotFoundf("not found"),
+			wantErr:  errNotFound,
 		},
 		{
 			name:     "~jdoe without metadata",
@@ -104,7 +104,7 @@ func Test_repo_LoadMetadata(t *testing.T) {
 				iri: "https://example.com/~jdoe",
 				m:   Metadata{},
 			},
-			wantErr: errors.NotFoundf("not found"),
+			wantErr: errNotFound,
 		},
 		{
 			name:     "~jdoe with metadata",
@@ -162,7 +162,7 @@ func Test_repo_PasswordCheck(t *testing.T) {
 			name:     "empty args is not found",
 			fields:   fields{Config: conf},
 			setupFns: []initFn{withOpenRoot, withBootstrap, withMockItems},
-			wantErr:  errors.NotFoundf("not found"),
+			wantErr:  errNotFound,
 		},
 		{
 			name:     "~jdoe without metadata",
@@ -171,7 +171,7 @@ func Test_repo_PasswordCheck(t *testing.T) {
 			args: args{
 				iri: "https://example.com/~jdoe",
 			},
-			wantErr: errors.NotFoundf("not found"),
+			wantErr: errNotFound,
 		},
 		{
 			name:     "~jdoe with correct pw",
@@ -248,7 +248,7 @@ func Test_repo_PasswordSet(t *testing.T) {
 				iri: "",
 				pw:  []byte("asd"),
 			},
-			wantErr: errors.NotFoundf("not found"),
+			wantErr: errNotFound,
 		},
 		{
 			name:     "~jdoe with pw",
