@@ -17,7 +17,6 @@ import (
 	vocab "github.com/go-ap/activitypub"
 	"github.com/go-ap/errors"
 	"github.com/google/go-cmp/cmp"
-	"github.com/jackc/pgx/v5"
 	"github.com/openshift/osin"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -108,7 +107,8 @@ func setupContainer(t *testing.T) Config {
 	ctx := context.Background()
 
 	if dockerHost := os.Getenv("DOCKER_HOST"); dockerHost == "" {
-		t.Fatalf("no DOCKER_HOST environment variable set to use for go-containers setup")
+		t.Skipf("no DOCKER_HOST environment variable set to use for go-containers setup")
+		return Config{}
 	}
 	pgContainer, err := postgres.Run(ctx, "postgres:18-alpine",
 		postgres.WithInitScripts(filepath.Join("images", "init-db.sql")),
@@ -134,19 +134,13 @@ func setupContainer(t *testing.T) Config {
 		t.Fatalf("err getting connection string: %s", err)
 	}
 
-	pconf, err := pgx.ParseConfig(connStr)
+	conf, err := ParseConfig(connStr)
 	if err != nil {
 		t.Fatalf("err getting config: %s", err)
 	}
+	conf.ErrFn = t.Logf
 
-	return Config{
-		Host:     pconf.Host,
-		Port:     pconf.Port,
-		Database: pconf.Database,
-		User:     pconf.User,
-		Password: pconf.Password,
-		ErrFn:    t.Logf,
-	}
+	return conf
 }
 
 type fields struct {

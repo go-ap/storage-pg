@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-ap/errors"
+	"github.com/jackc/pgx/v5"
 )
 
 const (
@@ -108,6 +109,20 @@ CREATE TABLE collection (
 
 func stringClean(qSql string) string {
 	return strings.ReplaceAll(qSql, "\n", "")
+}
+
+func ParseConfig(connStr string) (Config, error) {
+	pconf, err := pgx.ParseConfig(connStr)
+	if err != nil {
+		return Config{}, err
+	}
+	return Config{
+		Host:     pconf.Host,
+		Port:     pconf.Port,
+		Database: pconf.Database,
+		User:     pconf.User,
+		Password: pconf.Password,
+	}, nil
 }
 
 func Bootstrap(conf Config) error {
