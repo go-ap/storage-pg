@@ -90,6 +90,41 @@ func (r *repo) GetClient(code string) (osin.Client, error) {
 	return getClient(r.conn, code)
 }
 
+const listClientsSQL = "SELECT code, secret, redirect_uri, extra FROM client;"
+
+func (r *repo) ListClients() ([]osin.Client, error) {
+	if r == nil || r.conn == nil {
+		return nil, errInvalidCollection
+	}
+
+	result := make([]osin.Client, 0)
+
+	rows, err := r.conn.Query(listClientsSQL)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.NewNotFound(err, "No clients found")
+		}
+		r.errFn("Error listing clients: %+s", err)
+		return result, errors.Annotatef(err, "Unable to load clients")
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		c := new(cl)
+		err = rows.Scan(&c.Id, &c.Secret, &c.RedirectUri, &c.UserData)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, c)
+	}
+
+	if len(result) == 0 {
+		return nil, nil
+	}
+
+	return result, nil
+}
+
 const upsertAuthorizeSQL = `INSERT INTO authorize 
 	(client, code, expires_in, scope, redirect_uri, state, code_challenge, code_challenge_method, created_at, extra) VALUES 
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
