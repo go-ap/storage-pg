@@ -6,7 +6,7 @@ require (
 	github.com/go-ap/activitypub v0.0.0-20260330133938-2e4972ff690b
 	github.com/go-ap/errors v0.0.0-20260208110149-e1b309365966
 	github.com/go-ap/filters v0.0.0-20260330134234-a70aa1bf886d
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260330134316-7e2ac19ccca2
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260402080021-eac1c19dffa3
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/leporo/sqlf v1.4.0

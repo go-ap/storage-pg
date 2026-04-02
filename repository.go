@@ -151,29 +151,11 @@ func (r *repo) delete(tx *sql.Tx, items ...vocab.Item) error {
 	return nil
 }
 
+// Create saves a collection
+// Deprecated
 func (r *repo) Create(col vocab.CollectionInterface) (vocab.CollectionInterface, error) {
-	if r == nil || r.conn == nil {
-		return nil, errInvalidConnection
-	}
-
-	if vocab.IsNil(col) {
-		return nil, errNilItem
-	}
-	if col.GetLink() == "" {
-		return col, errNilItem
-	}
-	tx, err := r.conn.Begin()
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to start transaction")
-	}
-	if _, err = r.save(tx, col); err != nil {
-		_ = tx.Rollback()
-		return nil, errors.Annotatef(err, "failed to create collection")
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, errors.Annotatef(err, "failed to commit transaction")
-	}
-	return col, nil
+	it, err := r.Save(col)
+	return it.(vocab.CollectionInterface), err
 }
 
 var errInvalidCollection = errors.Errorf("invalid collection IRI")
