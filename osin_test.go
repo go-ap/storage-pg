@@ -67,7 +67,7 @@ func Test_repo_CreateClient(t *testing.T) {
 				return
 			}
 
-			sel := "SELECT code, secret, redirect_uri, extra from client where code=$1;"
+			sel := "SELECT code, secret, redirect_uri, extra FROM oauth2.client WHERE code=$1;"
 			res, err := s.conn.Query(sel, tt.arg.GetId())
 			if err != nil {
 				t.Fatalf("error when loading client from db: %s", err)

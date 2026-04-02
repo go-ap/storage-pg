@@ -33,7 +33,7 @@ func (r *repo) Close() {
 	}
 }
 
-const upsertClientSQL = `INSERT INTO client (code, secret, redirect_uri, extra) VALUES ($1, $2, $3, $4) 
+const upsertClientSQL = `INSERT INTO oauth2.client (code, secret, redirect_uri, extra) VALUES ($1, $2, $3, $4) 
 ON CONFLICT ON CONSTRAINT client_code_pkey DO UPDATE SET (secret, redirect_uri, extra) 
 = (excluded.secret, excluded.redirect_uri, excluded.extra);`
 
@@ -69,7 +69,7 @@ func (r *repo) UpdateClient(c osin.Client) error {
 	return r.CreateClient(c)
 }
 
-const deleteClientSQL = `DELETE FROM client where code = $1;`
+const deleteClientSQL = `DELETE FROM oauth2.client where code = $1;`
 
 func (r *repo) RemoveClient(id string) error {
 	if r == nil || r.conn == nil {
@@ -90,7 +90,7 @@ func (r *repo) GetClient(code string) (osin.Client, error) {
 	return getClient(r.conn, code)
 }
 
-const listClientsSQL = "SELECT code, secret, redirect_uri, extra FROM client;"
+const listClientsSQL = "SELECT code, secret, redirect_uri, extra FROM oauth2.client;"
 
 func (r *repo) ListClients() ([]osin.Client, error) {
 	if r == nil || r.conn == nil {
@@ -125,7 +125,7 @@ func (r *repo) ListClients() ([]osin.Client, error) {
 	return result, nil
 }
 
-const upsertAuthorizeSQL = `INSERT INTO authorize 
+const upsertAuthorizeSQL = `INSERT INTO oauth2.authorize 
 	(client, code, expires_in, scope, redirect_uri, state, code_challenge, code_challenge_method, created_at, extra) VALUES 
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
 ON CONFLICT ON CONSTRAINT authorize_code_pkey DO UPDATE SET 
@@ -182,8 +182,8 @@ const loadAuthorizeSQL = `SELECT
     a.code a_code, expires_in, scope, a.redirect_uri a_redirect_uri, state, created_at, a.extra a_extra,
     a.code_challenge a_code_challenge, a.code_challenge_method a_code_challenge_method,
     c.code c_code, c.redirect_uri c_redirect_uri, c.secret, c.extra c_extra
-FROM authorize a
-INNER JOIN client c ON a.client = c.code
+FROM oauth2.authorize a
+INNER JOIN oauth2.client c ON a.client = c.code
 WHERE a.code = $1 LIMIT 1;`
 
 func loadAuthorize(conn *sql.DB, code string) (*osin.AuthorizeData, error) {
@@ -242,7 +242,7 @@ func loadAuthorize(conn *sql.DB, code string) (*osin.AuthorizeData, error) {
 	return a, nil
 }
 
-const deleteAuthorizeSQL = `DELETE FROM authorize where code = $1;`
+const deleteAuthorizeSQL = `DELETE FROM oauth2.authorize where code = $1;`
 
 func (r *repo) RemoveAuthorize(code string) error {
 	if r == nil || r.conn == nil {
@@ -265,7 +265,7 @@ func execQueryInTx(conn *sql.DB, q string, params ...any) error {
 	return nil
 }
 
-const upsertAccessSQL = `INSERT INTO access 
+const upsertAccessSQL = `INSERT INTO oauth2.access 
 	(token, client, authorize, previous, refresh_token, expires_in, scope, redirect_uri, created_at, extra) VALUES 
 	($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
 ON CONFLICT ON CONSTRAINT access_token_pkey DO UPDATE SET 
@@ -326,7 +326,7 @@ func (r *repo) SaveAccess(data *osin.AccessData) error {
 	return nil
 }
 
-const saveRefresh = "INSERT INTO refresh (token, access_token) VALUES ($1, $2)"
+const saveRefresh = "INSERT INTO oauth2.refresh (token, access_token) VALUES ($1, $2)"
 
 func (r *repo) LoadAccess(code string) (*osin.AccessData, error) {
 	if r == nil || r.conn == nil {
@@ -344,9 +344,9 @@ const loadAccessSQL = `SELECT
 	auth.code auth_code, auth.expires_in auth_expires_in,  auth.scope auth_scope, auth.redirect_uri auth_redirect_uri, auth.state auth_state, auth.created_at auth_created_at, auth.extra auth_extra,
 	auth.code_challenge auth_code_challenge, auth.code_challenge_method auth_code_challenge_method,
 	c.code c_code, c.redirect_uri c_redirect_uri, c.secret, c.extra c_extra
-	FROM access acc
-	INNER JOIN client c ON acc.client = c.code
-	LEFT JOIN authorize auth ON acc.authorize = auth.code
+	FROM oauth2.access acc
+	INNER JOIN oauth2.client c ON acc.client = c.code
+	LEFT JOIN oauth2.authorize auth ON acc.authorize = auth.code
 WHERE acc.token = $1 LIMIT 1`
 
 func loadAccess(conn *sql.DB, code string, loadDeps bool) (*osin.AccessData, error) {
@@ -440,7 +440,7 @@ func loadAccess(conn *sql.DB, code string, loadDeps bool) (*osin.AccessData, err
 	return nil, errors.NotFoundf("unable to load access data")
 }
 
-const deleteAccessSQL = `DELETE FROM access where token = $1;`
+const deleteAccessSQL = `DELETE FROM oauth2.access where token = $1;`
 
 func (r *repo) RemoveAccess(token string) error {
 	if r == nil || r.conn == nil {
@@ -449,7 +449,7 @@ func (r *repo) RemoveAccess(token string) error {
 	return execQueryInTx(r.conn, deleteAccessSQL, token)
 }
 
-const loadRefresh = "SELECT access_token FROM refresh WHERE token=$1 LIMIT 1"
+const loadRefresh = "SELECT access_token FROM oauth2.refresh WHERE token=$1 LIMIT 1"
 
 func (r *repo) LoadRefresh(token string) (*osin.AccessData, error) {
 	if r == nil || r.conn == nil {
@@ -471,7 +471,7 @@ func (r *repo) LoadRefresh(token string) (*osin.AccessData, error) {
 	return loadAccess(r.conn, access.String, true)
 }
 
-const deleteRefreshSQL = `DELETE FROM refresh where token = $1;`
+const deleteRefreshSQL = `DELETE FROM oauth2.refresh where token = $1;`
 
 func (r *repo) RemoveRefresh(token string) error {
 	if r == nil || r.conn == nil {
@@ -524,7 +524,7 @@ func (c cl) GetUserData() any {
 
 var _ osin.Client = cl{}
 
-const getClientSQL = "SELECT code, secret, redirect_uri, extra FROM client WHERE code = $1"
+const getClientSQL = "SELECT code, secret, redirect_uri, extra FROM oauth2.client WHERE code = $1"
 
 func errClientNotFound(err error) error {
 	if err == nil {

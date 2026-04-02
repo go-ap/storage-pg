@@ -112,7 +112,7 @@ func setupContainer(t *testing.T) Config {
 	}
 	pgContainer, err := postgres.Run(ctx, "postgres:18-alpine",
 		postgres.WithInitScripts(filepath.Join("images", "init-db.sql")),
-		postgres.WithDatabase("test-db"),
+		postgres.WithDatabase("storage"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
 		testcontainers.WithWaitStrategy(
@@ -482,7 +482,7 @@ func Test_repo_Reset(t *testing.T) {
 
 			for _, table := range tables {
 				var count sql.NullInt32
-				query := fmt.Sprintf("SELECT COUNT(*) FROM %q WHERE true", table)
+				query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE true", table)
 				if err := r.conn.QueryRow(query).Scan(&count); err != nil {
 					t.Fatalf("Reset() left table in invalid state: %s", err)
 				}

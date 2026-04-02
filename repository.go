@@ -136,7 +136,7 @@ func (r *repo) delete(tx *sql.Tx, items ...vocab.Item) error {
 		params = append(params, it.GetLink())
 	}
 
-	q := pgs.DeleteFrom("object")
+	q := pgs.DeleteFrom("pub.object")
 	q.Where("iri").In(params...)
 	st, err := tx.Prepare(q.String())
 	if err != nil {
@@ -223,7 +223,7 @@ func (r *repo) RemoveFrom(col vocab.IRI, items ...vocab.Item) error {
 }
 
 func (r *repo) removeFrom(tx *sql.Tx, col vocab.IRI, items ...vocab.Item) error {
-	delSt := pgs.DeleteFrom("collection")
+	delSt := pgs.DeleteFrom("pub.collection")
 	delSt.Where("id = ?", col)
 	iris := make([]any, 0, len(items))
 	for _, iri := range vocab.ItemCollection(items).IRIs() {
@@ -312,7 +312,7 @@ func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
 		return it, errors.Annotatef(err, "query error")
 	}
 
-	q := pgs.InsertInto("object").
+	q := pgs.InsertInto("pub.object").
 		Set("iri", iri).
 		Set("raw", raw).
 		Clause("ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw")
@@ -359,7 +359,7 @@ func cleanIRI(i vocab.IRI) vocab.IRI {
 	return vocab.IRI(u.String())
 }
 
-const selOneQ = "SELECT id, raw FROM object WHERE id = $1;"
+const selOneQ = "SELECT id, raw FROM pub.object WHERE id = $1;"
 
 func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 	st, err := tx.Prepare(selOneQ)
@@ -456,10 +456,10 @@ var (
 var pgs = sqlf.PostgreSQL
 
 func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab.ItemCollection, error) {
-	s := pgs.From("object o")
+	s := pgs.From("pub.object o")
 	s.Select("o.id")
 	s.Select("o.raw")
-	s.Join("collection c", "c.iri = o.iri")
+	s.Join("pub.collection c", "c.iri = o.iri")
 	_ = filters.SQLWhere(s, ff...)
 	s.Where("c.id = ?", iri)
 	//s.OrderBy("COALESCE(o.published, c.added) DESC")
@@ -563,7 +563,7 @@ func (r *repo) addTo(tx *sql.Tx, col vocab.IRI, items ...vocab.Item) error {
 		return nil
 	}
 
-	q := pgs.InsertInto("collection")
+	q := pgs.InsertInto("pub.collection")
 	for _, it := range items {
 		if vocab.IsNil(it) {
 			return errNilItem

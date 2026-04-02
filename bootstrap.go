@@ -20,51 +20,54 @@ $$
     END
 $$;
 `
+	createSchemas = `CREATE SCHEMA pub;
+CREATE SCHEMA oauth2;`
+
 	createObjectsQuery = `
-CREATE TABLE object (
+CREATE TABLE pub.object (
   "raw" jsonb,
   "iri" varchar NOT NULL constraint object_key unique,
   "id" varchar GENERATED ALWAYS AS (raw ->> 'id') STORED,
-  "type" varchar GENERATED ALWAYS AS (raw ->> 'type') STORED ,
-  "to" varchar GENERATED ALWAYS AS (raw ->> 'to') STORED ,
-  "bto" varchar GENERATED ALWAYS AS (raw ->> 'bto') STORED ,
-  "cc" varchar GENERATED ALWAYS AS (raw ->> 'cc') STORED ,
-  "bcc" varchar GENERATED ALWAYS AS (raw ->> 'bcc') STORED ,
+  "type" varchar GENERATED ALWAYS AS (raw ->> 'type') STORED,
+  "to" varchar GENERATED ALWAYS AS (raw ->> 'to') STORED,
+  "bto" varchar GENERATED ALWAYS AS (raw ->> 'bto') STORED,
+  "cc" varchar GENERATED ALWAYS AS (raw ->> 'cc') STORED,
+  "bcc" varchar GENERATED ALWAYS AS (raw ->> 'bcc') STORED,
   "published" timestamptz GENERATED ALWAYS AS (text2ts(raw ->> 'published')) STORED,
-  "updated" timestamptz GENERATED ALWAYS AS (text2ts(raw ->> 'updated')) STORED ,
-  "url" varchar GENERATED ALWAYS AS (raw ->> 'url') STORED ,
-  "name" varchar GENERATED ALWAYS AS (raw ->> 'name') STORED ,
-  "preferred_username" text GENERATED ALWAYS AS (raw ->> 'preferredUsername') STORED ,
-  "summary" varchar GENERATED ALWAYS AS (raw ->> 'summary') STORED ,
-  "content" varchar GENERATED ALWAYS AS (raw ->> 'content') STORED ,
-  "actor" varchar GENERATED ALWAYS AS (raw ->> 'actor') STORED ,
+  "updated" timestamptz GENERATED ALWAYS AS (text2ts(raw ->> 'updated')) STORED,
+  "url" varchar GENERATED ALWAYS AS (raw ->> 'url') STORED,
+  "name" varchar GENERATED ALWAYS AS (raw ->> 'name') STORED,
+  "preferred_username" text GENERATED ALWAYS AS (raw ->> 'preferredUsername') STORED,
+  "summary" varchar GENERATED ALWAYS AS (raw ->> 'summary') STORED,
+  "content" varchar GENERATED ALWAYS AS (raw ->> 'content') STORED,
+  "actor" varchar GENERATED ALWAYS AS (raw ->> 'actor') STORED,
   "object" varchar GENERATED ALWAYS AS (raw ->> 'object') STORED 
 );
-CREATE INDEX object_type ON object(type);
-CREATE INDEX object_names ON object USING GIN (tsvector_concat(to_tsvector('english', name), to_tsvector('english', preferred_username)));
-CREATE INDEX object_contents ON object USING GIN (to_tsvector('english', summary)); 
+CREATE INDEX object_type ON pub.object(type);
+CREATE INDEX object_names ON pub.object USING GIN (tsvector_concat(to_tsvector('english', name), to_tsvector('english', preferred_username)));
+CREATE INDEX object_contents ON pub.object USING GIN (to_tsvector('english', summary)); 
+CREATE INDEX object_published ON pub.object(published);
 -- CREATE INDEX object_contents ON object USING GIN (to_tsvector('english', content));
-CREATE INDEX object_published ON object(published);
 `
 
 	createCollectionsQuery = `
-CREATE TABLE collection (
-  "id" varchar references object(iri),
+CREATE TABLE pub.collection (
+  "id" varchar references pub.object(iri),
   "iri" varchar NOT NULL,
   "added" timestamptz default (now() at time zone 'utc')
 );
 
--- CREATE TRIGGER collections_updated_published AFTER UPDATE ON collection BEGIN
--- UPDATE object SET updated = NOW() WHERE iri = old.id;
--- END;
+--CREATE TRIGGER collections_updated_published AFTER UPDATE ON pub.collection BEGIN
+--UPDATE pub.object SET updated = (now() at time zone 'utc') WHERE iri = old.id;
+--END;
 `
 
-	createMetaDataQuery = `CREATE TABLE "meta" (
+	createMetaDataQuery = `CREATE TABLE pub.meta (
   "iri" varchar NOT NULL constraint meta_key unique,
   "raw" jsonb NOT NULL DEFAULT '{}'
 );`
 
-	createClientTable = `CREATE TABLE IF NOT EXISTS "client"(
+	createClientTable = `CREATE TABLE IF NOT EXISTS oauth2.client (
 	"code" varchar constraint client_code_pkey PRIMARY KEY,
 	"secret" varchar NOT NULL,
 	"redirect_uri" varchar NOT NULL,
@@ -72,8 +75,8 @@ CREATE TABLE collection (
 );
 `
 
-	createAuthorizeTable = `CREATE TABLE IF NOT EXISTS "authorize" (
-	"client" varchar REFERENCES client(code),
+	createAuthorizeTable = `CREATE TABLE IF NOT EXISTS oauth2.authorize (
+	"client" varchar REFERENCES oauth2.client(code),
 	"code" varchar constraint authorize_code_pkey PRIMARY KEY,
 	"expires_in" INTEGER,
 	"scope" varchar,
@@ -86,10 +89,10 @@ CREATE TABLE collection (
 );
 `
 
-	createAccessTable = `CREATE TABLE IF NOT EXISTS "access" (
+	createAccessTable = `CREATE TABLE IF NOT EXISTS oauth2.access (
 	"token" varchar constraint access_token_pkey PRIMARY KEY,
-	"client" varchar REFERENCES client(code),
-	"authorize" varchar REFERENCES authorize(code),
+	"client" varchar REFERENCES oauth2.client(code),
+	"authorize" varchar REFERENCES oauth2.authorize(code),
 	"previous" varchar,
 	"refresh_token" varchar NOT NULL,
 	"expires_in" INTEGER,
@@ -100,9 +103,9 @@ CREATE TABLE collection (
 );
 `
 
-	createRefreshTable = `CREATE TABLE IF NOT EXISTS "refresh" (
+	createRefreshTable = `CREATE TABLE IF NOT EXISTS oauth2.refresh (
 	"token" varchar PRIMARY KEY NOT NULL,
-	"access_token" varchar NOT NULL REFERENCES access(token) ON DELETE CASCADE 
+	"access_token" varchar NOT NULL REFERENCES oauth2.access(token) ON DELETE CASCADE 
 );
 `
 )
@@ -157,6 +160,7 @@ func Bootstrap(conf Config) error {
 	}
 
 	err = exec(r.conn, createImmutableTSFunc)
+	err = exec(r.conn, createSchemas)
 	err = exec(r.conn, createObjectsQuery)
 	err = exec(r.conn, createCollectionsQuery)
 	err = exec(r.conn, createMetaDataQuery)
@@ -170,9 +174,9 @@ func Bootstrap(conf Config) error {
 var errInvalidConnection = os.ErrNotExist
 
 var tables = []string{
-	"object", "collection",
-	"meta",
-	"client", "authorize", "access", "refresh",
+	"pub.object", "pub.collection",
+	"pub.meta",
+	"oauth2.client", "oauth2.authorize", "oauth2.access", "oauth2.refresh",
 }
 
 func (r *repo) Reset() {
@@ -188,7 +192,7 @@ func (r *repo) Reset() {
 	}
 
 	for _, table := range tables {
-		s := `TRUNCATE TABLE "` + table + `" CASCADE;`
+		s := `TRUNCATE TABLE ` + table + ` CASCADE;`
 		if _, err = tx.Exec(s); err != nil {
 			_ = tx.Rollback()
 			r.errFn("unable to truncate table %s: %s", table, err)
@@ -220,7 +224,7 @@ func Clean(conf Config) error {
 	defer r.Close()
 
 	for _, table := range tables {
-		if _, err = r.conn.Exec(`DROP TABLE IF EXISTS "` + table + `" CASCADE`); err != nil {
+		if _, err = r.conn.Exec(`DROP TABLE IF EXISTS ` + table + ` CASCADE`); err != nil {
 			r.errFn("unable to drop table %s: %s", table, err)
 		}
 	}

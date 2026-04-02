@@ -180,7 +180,7 @@ func (r *repo) SaveKey(iri vocab.IRI, key crypto.PrivateKey) (*vocab.PublicKey, 
 	}, nil
 }
 
-const selectMetadataSQL = `SELECT raw FROM meta WHERE iri = $1;`
+const selectMetadataSQL = `SELECT raw FROM pub.meta WHERE iri = $1;`
 
 func loadMetadataFromTable(conn *sql.DB, iri vocab.IRI) ([]byte, error) {
 	var meta []byte
@@ -190,7 +190,7 @@ func loadMetadataFromTable(conn *sql.DB, iri vocab.IRI) ([]byte, error) {
 	return meta, nil
 }
 
-const upsertMetaDataSQL = `INSERT INTO meta (iri, raw) VALUES($1, $2) 
+const upsertMetaDataSQL = `INSERT INTO pub.meta (iri, raw) VALUES($1, $2) 
 ON CONFLICT ON CONSTRAINT meta_key DO UPDATE SET raw = excluded.raw;`
 
 func saveMetadataToTable(conn *sql.DB, iri vocab.IRI, m []byte) error {
