@@ -6,9 +6,9 @@ require (
 	github.com/go-ap/activitypub v0.0.0-20260416122353-fb80985e153a
 	github.com/go-ap/errors v0.0.0-20260208110149-e1b309365966
 	github.com/go-ap/filters v0.0.0-20260416122840-724cb3c8974c
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260417104420-591ce7c6fa77
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260504122654-fc571e4bdb5a
 	github.com/google/go-cmp v0.7.0
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/leporo/sqlf v1.4.0
 	github.com/openshift/osin v1.0.2-0.20210113124101-8612686d6dda
 	github.com/testcontainers/testcontainers-go v0.41.0

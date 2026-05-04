@@ -337,18 +337,6 @@ func mockCollection(parent vocab.Item, colType vocab.CollectionPath) vocab.Colle
 	}
 }
 
-func withGeneratedRoot(root vocab.Item) initFn {
-	return func(t *testing.T, r *repo) *repo {
-		if _, err := r.Save(root); err != nil {
-			t.Errorf("unable to save root service: %s", err)
-		}
-		if _, err := r.Create(mockCollection(root, vocab.Outbox)); err != nil {
-			t.Errorf("unable to save root service's outbox: %s", err)
-		}
-		return r
-	}
-}
-
 func withItems(items vocab.ItemCollection) initFn {
 	return func(t *testing.T, r *repo) *repo {
 		tx, err := r.conn.Begin()

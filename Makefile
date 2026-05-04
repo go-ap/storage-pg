@@ -12,17 +12,22 @@ TEST_TARGET ?= .
 GO111MODULE = on
 PROJECT_NAME := $(shell basename $(PWD))
 
-.PHONY: test coverage clean download container
+.PHONY: test coverage clean download container podman-check
+
+podman-check:
+ifndef DOCKER_HOST
+$(warning DOCKER_HOST environment variable needs to be exported to run the tests succesfully)
+endif
 
 download: go.sum
 
 go.sum: go.mod
 	$(GO) mod tidy
 
-test: go.sum clean
+test: go.sum clean podman-check
 	$(TEST) $(TEST_FLAGS) -cover $(TEST_TARGET) -json | $(GO) tool tparse -all
 
-coverage: go.sum clean
+coverage: go.sum clean podman-check
 	@mkdir ./_coverage
 	$(TEST) $(TEST_FLAGS) -covermode=count -args -test.gocoverdir="$(PWD)/_coverage" $(TEST_TARGET) > /dev/null || true
 	$(GO) tool covdata percent -i=./_coverage/ -o $(PROJECT_NAME).coverprofile
@@ -33,7 +38,7 @@ clean:
 	@$(RM) -v *.coverprofile
 	@$(RM) -v tests.json
 
-image:
+image: podman-check
 	./images/image.sh
 
 container: image
