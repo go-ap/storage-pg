@@ -41,7 +41,7 @@ var emptyJSONObject = []byte{'{', '}'}
 
 var nilClientErr = errors.Newf("nil client")
 
-func (r *repo) CreateClient(c osin.Client) error {
+func (r *repo) SaveClient(c osin.Client) error {
 	if r == nil || r.conn == nil {
 		return errInvalidConnection
 	}
@@ -63,10 +63,6 @@ func (r *repo) CreateClient(c osin.Client) error {
 	}
 
 	return execQueryInTx(r.conn, upsertClientSQL, params...)
-}
-
-func (r *repo) UpdateClient(c osin.Client) error {
-	return r.CreateClient(c)
 }
 
 const deleteClientSQL = `DELETE FROM oauth2.client where code = $1;`

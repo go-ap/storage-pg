@@ -58,7 +58,7 @@ func Test_repo_CreateClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := mockRepo(t, fields{Config: conf}, tt.setupFns...)
 			t.Cleanup(s.Close)
-			err := s.CreateClient(tt.arg)
+			err := s.SaveClient(tt.arg)
 			if !cmp.Equal(tt.wantErr, err, EquateWeakErrors) {
 				t.Errorf("invalid error type received %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
 			}
@@ -229,7 +229,7 @@ func Test_repo_UpdateClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := mockRepo(t, fields{Config: conf}, tt.setupFns...)
 			t.Cleanup(s.Close)
-			err := s.UpdateClient(tt.arg)
+			err := s.SaveClient(tt.arg)
 			if !cmp.Equal(tt.wantErr, err, EquateWeakErrors) {
 				t.Errorf("invalid error type received %s", cmp.Diff(tt.wantErr, err, EquateWeakErrors))
 			}
