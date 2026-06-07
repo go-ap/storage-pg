@@ -3,12 +3,12 @@ module github.com/go-ap/storage-pg
 go 1.25.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20260602080815-739274c2fcce
-	github.com/go-ap/errors v0.0.0-20260208110149-e1b309365966
-	github.com/go-ap/filters v0.0.0-20260602081319-5ed1fa02cd11
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260516093850-f84de69d19fe
+	github.com/go-ap/activitypub v0.0.0-20260607141243-4f8aa4005e65
+	github.com/go-ap/errors v0.0.0-20260607141156-afed270859b6
+	github.com/go-ap/filters v0.0.0-20260607141701-131281f883a2
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260607142507-0dc986eef59e
 	github.com/google/go-cmp v0.7.0
-	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/leporo/sqlf v1.4.0
 	github.com/openshift/osin v1.0.2-0.20210113124101-8612686d6dda
 	github.com/testcontainers/testcontainers-go v0.41.0
@@ -23,7 +23,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RoaringBitmap/roaring v1.9.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.24.4 // indirect
+	github.com/bits-and-blooms/bitset v1.24.5 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.3.1 // indirect
@@ -43,7 +43,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-ap/jsonld v0.0.0-20251216162253-e38fa664ea77 // indirect
+	github.com/go-ap/jsonld v0.0.0-20260607140920-737b40e0ca38 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

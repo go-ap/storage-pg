@@ -2,6 +2,7 @@ image: archlinux
 packages:
   - go
   - podman
+  - golangci-lint
 sources:
   - https://github.com/go-ap/storage-pg
 secrets:
@@ -24,6 +25,9 @@ tasks:
 
       podman system migrate
       systemctl --user enable --now podman.service podman.socket
+  - fmt: |
+      cd storage-pg
+      test -z $(gofmt -l .)
   - tests: |
       cd storage-pg
       make test
@@ -33,3 +37,6 @@ tasks:
       git switch -C master origin/master
       make coverage
       go tool goveralls -flagname unit-tests -service=${CI_NAME} -coverprofile storage-pg.coverprofile -repotokenfile ~/.coveralls.tok
+  - lint: |
+      cd storage-pg
+      golangci-lint run || true
