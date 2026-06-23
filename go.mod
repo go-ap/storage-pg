@@ -3,17 +3,17 @@ module github.com/go-ap/storage-pg
 go 1.25.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20260607141243-4f8aa4005e65
+	github.com/go-ap/activitypub v0.0.0-20260623165555-815f070c5691
 	github.com/go-ap/errors v0.0.0-20260607141156-afed270859b6
-	github.com/go-ap/filters v0.0.0-20260607141701-131281f883a2
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260607142507-0dc986eef59e
+	github.com/go-ap/filters v0.0.0-20260623165758-2d9724598dc0
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260623172337-883f549adb9e
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/leporo/sqlf v1.4.0
 	github.com/openshift/osin v1.0.2-0.20210113124101-8612686d6dda
 	github.com/testcontainers/testcontainers-go v0.41.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.41.0
-	golang.org/x/crypto v0.52.0
+	golang.org/x/crypto v0.53.0
 )
 
 require (
@@ -93,12 +93,12 @@ require (
 	go.opentelemetry.io/otel v1.41.0 // indirect
 	go.opentelemetry.io/otel/metric v1.41.0 // indirect
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
-	golang.org/x/mod v0.35.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
-	golang.org/x/tools v0.44.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	google.golang.org/grpc v1.79.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/neurosnap/sentences.v1 v1.0.7 // indirect
