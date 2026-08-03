@@ -509,7 +509,7 @@ func loadFromDb(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.Item
 	if it == nil || vocab.IsNil(it) {
 		return nil, errors.NewNotFound(errNilItem, "not found")
 	}
-	if !it.IsCollection() {
+	if !vocab.IsCollection(it) {
 		return it, nil
 	}
 
