@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"context"
 	"database/sql"
 	"net/url"
 	"path/filepath"
@@ -174,6 +175,17 @@ func (r *repo) AddTo(col vocab.IRI, items ...vocab.Item) error {
 		return errors.Annotatef(err, "failed to start transaction")
 	}
 
+	sres, err := pgs.Select("iri").From("pub.object").Where("iri = ?", col).
+		ExecAndClose(context.Background(), tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if cnt, err := sres.RowsAffected(); cnt == 0 || err != nil {
+		_ = tx.Rollback()
+		return errors.NotFoundf("unable load collection %s", col)
+	}
+
 	if err = r.addTo(tx, col, items...); err != nil {
 		_ = tx.Rollback()
 		return err
@@ -192,6 +204,17 @@ func (r *repo) RemoveFrom(col vocab.IRI, items ...vocab.Item) error {
 	tx, err := r.conn.Begin()
 	if err != nil {
 		return errors.Annotatef(err, "failed to start transaction")
+	}
+
+	sres, err := pgs.Select("iri").From("pub.object").Where("iri = ?", col).
+		ExecAndClose(context.Background(), tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if cnt, err := sres.RowsAffected(); cnt == 0 || err != nil {
+		_ = tx.Rollback()
+		return errors.NotFoundf("unable load collection %s", col)
 	}
 
 	if err = r.removeFrom(tx, col, items...); err != nil {
