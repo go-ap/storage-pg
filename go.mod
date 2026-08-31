@@ -3,10 +3,10 @@ module github.com/go-ap/storage-pg
 go 1.25.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20260824082814-78f0de545fcf
+	github.com/go-ap/activitypub v0.0.0-20260828142325-6c1da3fca413
 	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20260824082944-efaa36126211
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260824083351-1b8cb6447fbf
+	github.com/go-ap/filters v0.0.0-20260829143922-adca6eec8763
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260831090222-2c28ad1825e4
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/leporo/sqlf v1.4.0
