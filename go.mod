@@ -3,10 +3,10 @@ module github.com/go-ap/storage-pg
 go 1.26.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20260913133145-416f1c0ed9a1
+	github.com/go-ap/activitypub v0.0.0-20260914124931-8ec3d41415b0
 	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20260913133245-971d96337e18
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260913133431-0e84f49e4365
+	github.com/go-ap/filters v0.0.0-20260914130005-a94e6e63f9e9
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260914131447-4b414c46eacd
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/leporo/sqlf v1.4.0
@@ -103,7 +103,7 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/neurosnap/sentences.v1 v1.0.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	quamina.net/go/quamina/v2 v2.0.2 // indirect
+	quamina.net/go/quamina/v2 v2.0.3 // indirect
 )
 
 tool (
