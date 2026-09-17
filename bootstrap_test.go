@@ -15,7 +15,7 @@ import (
 	"time"
 
 	vocab "github.com/go-ap/activitypub"
-	"github.com/go-ap/errors"
+	conformance "github.com/go-ap/storage-conformance-suite"
 	"github.com/google/go-cmp/cmp"
 	"github.com/openshift/osin"
 	"github.com/testcontainers/testcontainers-go"
@@ -24,50 +24,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func areErrors(a, b any) bool {
-	_, ok1 := a.(error)
-	_, ok2 := b.(error)
-	return ok1 && ok2
-}
-
-func compareErrors(x, y any) bool {
-	xe, _ := x.(error)
-	ye, _ := y.(error)
-	if errors.Is(xe, ye) || errors.Is(ye, xe) {
-		return true
-	}
-	return xe.Error() == ye.Error()
-}
-
-var EquateWeakErrors = cmp.FilterValues(areErrors, cmp.Comparer(compareErrors))
-
-func areItemCollections(a, b any) bool {
-	_, ok1 := a.(vocab.ItemCollection)
-	_, ok3 := a.(*vocab.ItemCollection)
-	_, ok2 := b.(vocab.ItemCollection)
-	_, ok4 := b.(*vocab.ItemCollection)
-	return (ok1 || ok3) && (ok2 || ok4)
-}
-
-func compareItemCollections(x, y interface{}) bool {
-	var i1 vocab.ItemCollection
-	var i2 vocab.ItemCollection
-	if ic1, ok := x.(vocab.ItemCollection); ok {
-		i1 = ic1
-	}
-	if ic1, ok := x.(*vocab.ItemCollection); ok {
-		i1 = *ic1
-	}
-	if ic2, ok := y.(vocab.ItemCollection); ok {
-		i2 = ic2
-	}
-	if ic2, ok := y.(*vocab.ItemCollection); ok {
-		i2 = *ic2
-	}
-	return i1.Equal(i2)
-}
-
-var EquateItemCollections = cmp.FilterValues(areItemCollections, cmp.Comparer(compareItemCollections))
+var (
+	EquateItemCollections = conformance.EquateItemCollections
+	EquateWeakErrors      = conformance.EquateErrors
+)
 
 func checkInsertedValue(t *testing.T, db *sql.DB, it vocab.Item) {
 	sel := "SELECT id, raw FROM object WHERE id = ?;"
