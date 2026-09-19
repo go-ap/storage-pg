@@ -3,10 +3,10 @@ module github.com/go-ap/storage-pg
 go 1.26.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20260918105548-e6a56570f510
+	github.com/go-ap/activitypub v0.0.0-20260918155011-090adf72874a
 	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20260918110443-64f45f55c1fa
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260918110939-89c051340651
+	github.com/go-ap/filters v0.0.0-20260918155248-f7ae9002f89f
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260919092429-869c75bd2b67
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/leporo/sqlf v1.4.0
@@ -19,7 +19,7 @@ require (
 require (
 	dario.cat/mergo v1.0.2 // indirect
 	git.sr.ht/~mariusor/go-xsd-duration v0.0.0-20220703122237-02e73435a078 // indirect
-	github.com/Azure/go-ansiterm v0.0.0-20260914234754-15785f84ba1c // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20260917205352-e937bb47801a // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RoaringBitmap/roaring v1.9.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

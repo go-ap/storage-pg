@@ -257,17 +257,17 @@ type preparer interface {
 	Prepare(query string) (*sql.Stmt, error)
 }
 
-func (r *repo) Load(iri vocab.IRI, ff ...filters.Check) (vocab.Item, error) {
+func (r *repo) Load(iri vocab.IRI, checks ...filters.Check) (vocab.Item, error) {
 	if r == nil || r.conn == nil {
 		return nil, errInvalidConnection
 	}
 
-	it, err := loadFromDb(r.conn, iri, ff...)
+	it, err := loadFromDb(r.conn, iri, checks...)
 	if err != nil {
 		return nil, err
 	}
 
-	it = filters.Checks(ff).Run(it)
+	it = filters.Checks(checks).Run(it)
 	if col, ok := it.(vocab.ItemCollection); ok && col.Count() == 1 {
 		return col.First(), nil
 	}
@@ -401,7 +401,7 @@ func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 		if vocab.IsNil(it) {
 			return nil, errors.Annotatef(errNilItem, "IRI %s", iri)
 		}
-		it = loadFirstLevelProperties(tx, it)
+		err = vocab.OnItem(it, loadFirstLevelProperties(tx))
 	}
 	if vocab.IsNil(it) {
 		return nil, errNotFound
@@ -410,61 +410,74 @@ func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 	return it, nil
 }
 
-func loadFirstLevelProperties(tx preparer, it vocab.Item, ff ...filters.Check) vocab.Item {
-	typ := it.GetType()
-	if vocab.ActorTypes.Match(typ) {
-		return loadActorFirstLevelProperties(tx, it, filters.ActorChecks(ff...)...)
-	} else if append(vocab.ActivityTypes, vocab.IntransitiveActivityTypes...).Match(typ) {
-		return runActivityFirstLevelProperties(tx, it, filters.ActivityChecks(ff...)...)
-	}
-	return loadObjectFirstLevelProperties(tx, it, ff...)
-}
-
-func loadActorFirstLevelProperties(tx preparer, it vocab.Item, ff ...filters.Check) vocab.Item {
-	return loadObjectFirstLevelProperties(tx, it, ff...)
-}
-
-func loadObjectFirstLevelProperties(tx preparer, it vocab.Item, ff ...filters.Check) vocab.Item {
-	_ = vocab.OnObject(it, loadTagsForObject(tx, ff...))
-	return it
-}
-
-func loadTagsForObject(tx preparer, ff ...filters.Check) func(o *vocab.Object) error {
-	tf := filters.TagChecks(ff...)
-	return func(o *vocab.Object) error {
-		if vocab.IsNil(o.Tag) {
-			return nil
-		}
-		tags := make(vocab.ItemCollection, 0)
-		err := vocab.OnItem(o.Tag, func(it vocab.Item) error {
-			if vocab.IsNil(it) {
-				return nil
-			}
-			var tag vocab.Item
-			if !vocab.IsIRI(it) {
-				tag = it
-			} else {
-				ob, err := loadFromDb(tx, it.GetLink(), tf...)
-				if err != nil {
-					return nil
-				}
-				if ob = filters.TagChecks(ff...).Run(ob); ob == nil {
-					return nil
-				}
-				tag = it
-			}
-			_ = tags.Append(tag)
-			return nil
-		})
-		if err == nil && len(tags) > 0 {
-			o.Tag = tags.Normalize()
+func loadFirstLevelProperties(tx preparer, checks ...filters.Check) func(vocab.Item) error {
+	return func(it vocab.Item) error {
+		var err error
+		typ := it.GetType()
+		switch {
+		case vocab.IntransitiveActivityTypes.Match(typ):
+			err = vocab.OnIntransitiveActivity(it, loadFilteredPropsForIntransitiveActivity(tx, checks...))
+		case vocab.ActivityTypes.Match(typ):
+			err = vocab.OnActivity(it, loadFilteredPropsForActivity(tx, checks...))
+		case vocab.ActorTypes.Match(typ):
+			err = vocab.OnActor(it, loadFilteredPropsForActor(tx, checks...))
+		case vocab.ObjectTypes.Match(typ):
+			err = vocab.OnObject(it, loadFilteredPropsForObject(tx, checks...))
+		case orderedCollectionTypes.Match(typ):
+			err = vocab.OnOrderedCollection(it, loadFilteredItemsForOrderedCollection(tx, checks...))
+		case collectionTypes.Match(typ):
+			err = vocab.OnCollection(it, loadFilteredItemsForCollection(tx, checks...))
 		}
 		return err
 	}
 }
 
-func runActivityFirstLevelProperties(tx preparer, it vocab.Item, ff ...filters.Check) vocab.Item {
-	return it
+func loadFilteredItemsForOrderedCollection(tx preparer, checks ...filters.Check) vocab.WithOrderedCollectionFn {
+	return func(col *vocab.OrderedCollection) error {
+		var err error
+		col.OrderedItems, err = loadCollectionItems(tx, col.ID, checks...)
+		return err
+	}
+}
+func loadFilteredItemsForCollection(tx preparer, checks ...filters.Check) vocab.WithCollectionFn {
+	return func(col *vocab.Collection) error {
+		var err error
+		col.Items, err = loadCollectionItems(tx, col.ID, checks...)
+		return err
+	}
+}
+
+func loadFilteredPropsForObject(tx preparer, checks ...filters.Check) vocab.WithObjectFn {
+	tagChecks := filters.TagChecks(checks...)
+	if len(tagChecks) == 0 {
+		tagChecks = filters.Checks{filters.NoType}
+	}
+	return func(o *vocab.Object) error {
+		var err error
+		if !vocab.IsNil(o.Tag) && len(tagChecks) > 0 {
+			o.Tag, err = loadItemFromDB(tx, o.Tag, tagChecks...)
+		}
+		return err
+	}
+}
+
+func loadFilteredPropsForActor(tx preparer, checks ...filters.Check) vocab.WithActorFn {
+	return func(a *vocab.Actor) error {
+		return vocab.OnObject(a, loadFilteredPropsForObject(tx, checks...))
+	}
+}
+
+func loadFilteredPropsForIntransitiveActivity(tx preparer, checks ...filters.Check) vocab.WithIntransitiveActivityFn {
+	return func(a *vocab.IntransitiveActivity) error {
+		return nil
+	}
+
+}
+
+func loadFilteredPropsForActivity(tx preparer, checks ...filters.Check) vocab.WithActivityFn {
+	return func(a *vocab.Activity) error {
+		return nil
+	}
 }
 
 var (
@@ -474,12 +487,12 @@ var (
 
 var pgs = sqlf.PostgreSQL
 
-func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab.ItemCollection, error) {
+func loadCollectionItems(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.ItemCollection, error) {
 	s := pgs.From("pub.object o")
 	s.Select("o.id")
 	s.Select("o.raw")
 	s.Join("pub.collection c", "c.iri = o.iri")
-	_ = filters.SQLWhere(s, ff...)
+	_ = filters.SQLWhere(s, checks...)
 	s.Where("c.id = ?", iri)
 	//s.OrderBy("COALESCE(o.published, c.added) DESC")
 
@@ -532,45 +545,58 @@ func loadCollectionItems(tx preparer, iri vocab.IRI, ff ...filters.Check) (vocab
 		return ret, errNotFound
 	}
 
-	err = vocab.OnItem(ret, func(item vocab.Item) error {
-		item = loadActorFirstLevelProperties(tx, item, ff...)
-		item = loadObjectFirstLevelProperties(tx, item, ff...)
-		item = runActivityFirstLevelProperties(tx, item, ff...)
-		return nil
-	})
+	err = vocab.OnItem(ret, loadFirstLevelProperties(tx, checks...))
 	return ret, err
+}
+
+func loadItemFromDB(tx preparer, it vocab.Item, checks ...filters.Check) (vocab.Item, error) {
+	res := make(vocab.ItemCollection, 0)
+	err := vocab.OnItem(it, func(iit vocab.Item) error {
+		if vocab.IsNil(iit) {
+			return nil
+		}
+
+		if vocab.IsIRI(iit) {
+			ob, err := loadSingleObject(tx, iit.GetLink())
+			if err != nil {
+				return nil
+			}
+			if ob = filters.Checks(checks).Run(ob); ob != nil {
+				iit = ob
+			}
+		}
+		return res.Append(iit)
+	})
+	return res.Normalize(), err
 }
 
 func loadFromDb(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.Item, error) {
 	it, err := loadSingleObject(tx, iri)
+	if err != nil {
+		return nil, errors.NewNotFound(err, "not found")
+	}
 	if it == nil || vocab.IsNil(it) {
 		return nil, errors.NewNotFound(errNilItem, "not found")
 	}
+
 	if !vocab.IsCollection(it) {
 		return it, nil
 	}
 
-	items, _ := loadCollectionItems(tx, it.GetLink(), checks...)
 	typ := it.GetType()
-	if orderedCollectionTypes.Match(typ) {
-		err = vocab.OnOrderedCollection(it, func(col *vocab.OrderedCollection) error {
+	switch {
+	case orderedCollectionTypes.Match(typ):
+		_ = vocab.OnOrderedCollection(it, func(col *vocab.OrderedCollection) error {
 			col.ID = iri
-			col.OrderedItems = items
 			return nil
 		})
-	} else if collectionTypes.Match(typ) {
-		err = vocab.OnCollection(it, func(col *vocab.Collection) error {
+	case collectionTypes.Match(typ):
+		_ = vocab.OnCollection(it, func(col *vocab.Collection) error {
 			col.ID = iri
-			if col.TotalItems > 0 {
-				col.Items = items
-			}
 			return nil
 		})
 	}
 
-	if err != nil {
-		return nil, err
-	}
 	return it, nil
 }
 
