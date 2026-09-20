@@ -83,14 +83,15 @@ func (r *repo) Save(it vocab.Item) (vocab.Item, error) {
 		return nil, errors.Annotatef(err, "failed to start transaction")
 	}
 
-	if it, err = r.save(tx, it); err != nil {
+	col, err := r.save(tx, it)
+	if err != nil {
 		_ = tx.Rollback()
 		return it, errors.Annotatef(err, "failed to save item")
 	}
-
 	if err = tx.Commit(); err != nil {
 		err = errors.Annotatef(err, "failed to commit transaction")
 	}
+	it = col.Normalize()
 	return it, err
 }
 
@@ -305,22 +306,29 @@ func isCollectionIRI(iri vocab.IRI) bool {
 	return collectionPaths.Contains(lst)
 }
 
-func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
-	if vocab.IsNil(it) {
+func (r *repo) save(tx preparer, items ...vocab.Item) (vocab.ItemCollection, error) {
+	if len(items) == 0 {
 		return nil, nil
 	}
 
-	iri := it.GetLink()
+	q := pgs.InsertInto("pub.object").
+		Clause("ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw")
 
-	raw, err := encodeItemFn(it)
-	if err != nil {
-		return it, errors.Annotatef(err, "query error")
+	for _, it := range items {
+		if vocab.IsNil(it) {
+			return nil, nil
+		}
+
+		iri := it.GetLink()
+
+		raw, err := encodeItemFn(it)
+		if err != nil {
+			return nil, errors.Annotatef(err, "unable to encode item")
+		}
+
+		q.Set("iri", iri).Set("raw", raw)
 	}
 
-	q := pgs.InsertInto("pub.object").
-		Set("iri", iri).
-		Set("raw", raw).
-		Clause("ON CONFLICT ON CONSTRAINT object_key DO UPDATE SET raw = excluded.raw")
 	st, err := tx.Prepare(q.String())
 	if err != nil {
 		return nil, errors.Annotatef(err, "unable to prepare statement")
@@ -328,21 +336,33 @@ func (r *repo) save(tx *sql.Tx, it vocab.Item) (vocab.Item, error) {
 	defer st.Close()
 
 	if _, err = st.Exec(q.Args()...); err != nil {
-		return it, errors.Annotatef(err, "query execution error")
+		return items, errors.Annotatef(err, "query execution error")
 	}
 
-	// NOTE(marius): we don't use vocab.Split because we want the path without last element,
-	// which might be a collection
-	if col, _ := filepath.Split(iri.String()); isCollectionIRI(vocab.IRI(col)) {
-		// Add private items to the collections table
-		if colIRI, k := vocab.Split(vocab.IRI(col)); k == "" {
-			if err = r.addTo(tx, colIRI, it); err != nil {
-				r.logFn("failed adding item to collection: %s: %s", colIRI, err)
+	colMap := make(map[vocab.IRI]vocab.ItemCollection)
+	for _, it := range items {
+		// NOTE(marius): we don't use vocab.Split because we want the path without last element,
+		// which might be a collection
+		if col, _ := filepath.Split(it.GetLink().String()); isCollectionIRI(vocab.IRI(col)) {
+			// Add private items to the collection table they part of (eg. ~jdoe/outbox/1 -> ~jdoe/outbox)
+			if colIRI, k := vocab.Split(vocab.IRI(col)); k == "" {
+				col, ok := colMap[colIRI]
+				if !ok {
+					col = make(vocab.ItemCollection, 0)
+				}
+				_ = col.Append(it)
+				colMap[colIRI] = col
 			}
 		}
 	}
 
-	return it, err
+	for colIRI, colItems := range colMap {
+		if err = r.addTo(tx, colIRI, colItems...); err != nil {
+			r.logFn("failed adding items to collection: %s: %s", colIRI, err)
+		}
+	}
+
+	return items, err
 }
 
 func cleanIRI(i vocab.IRI) vocab.IRI {
@@ -362,6 +382,55 @@ func cleanIRI(i vocab.IRI) vocab.IRI {
 	}
 
 	return vocab.IRI(u.String())
+}
+
+func loadMultipleObjects(tx preparer, iris ...vocab.IRI) (vocab.ItemCollection, error) {
+	params := make([]any, 0, len(iris))
+	for _, iri := range iris {
+		params = append(params, iri)
+	}
+	q := pgs.From("pub.object").
+		Select("iri").
+		Select("raw").
+		Where("iri").In(params...)
+
+	st, err := tx.Prepare(q.String())
+	if err != nil {
+		return nil, errors.Annotatef(err, "unable to prepare statement")
+	}
+	defer st.Close()
+
+	rows, err := st.Query(q.Args()...)
+	if err != nil {
+		return nil, errors.Annotatef(err, "query execution error")
+	}
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.NotFoundf("Unable to load %s", iris)
+		}
+		return nil, errors.Annotatef(err, "unable to load object %s", iris)
+	}
+	defer rows.Close()
+
+	col := make(vocab.ItemCollection, 0, len(iris))
+	// Iterate through the result set
+	for rows.Next() {
+		var iri vocab.IRI
+		var raw sql.NullString
+
+		if err = rows.Scan(&iri, &raw); err != nil {
+			return nil, errors.Annotatef(err, "scan values error")
+		}
+
+		var it vocab.Item
+		if raw.Valid {
+			if it, _ = decodeItemFn([]byte(raw.String)); !vocab.IsNil(it) {
+				_ = col.Append(it)
+			}
+		}
+	}
+
+	return col, nil
 }
 
 const selOneQ = "SELECT id, raw FROM pub.object WHERE id = $1;"
@@ -401,7 +470,6 @@ func loadSingleObject(tx preparer, iri vocab.IRI) (vocab.Item, error) {
 		if vocab.IsNil(it) {
 			return nil, errors.Annotatef(errNilItem, "IRI %s", iri)
 		}
-		err = vocab.OnItem(it, loadFirstLevelProperties(tx))
 	}
 	if vocab.IsNil(it) {
 		return nil, errNotFound
@@ -469,14 +537,14 @@ func loadFilteredPropsForActor(tx preparer, checks ...filters.Check) vocab.WithA
 
 func loadFilteredPropsForIntransitiveActivity(tx preparer, checks ...filters.Check) vocab.WithIntransitiveActivityFn {
 	return func(a *vocab.IntransitiveActivity) error {
-		return nil
+		return vocab.OnObject(a, loadFilteredPropsForObject(tx, checks...))
 	}
 
 }
 
 func loadFilteredPropsForActivity(tx preparer, checks ...filters.Check) vocab.WithActivityFn {
 	return func(a *vocab.Activity) error {
-		return nil
+		return vocab.OnIntransitiveActivity(a, loadFilteredPropsForIntransitiveActivity(tx, checks...))
 	}
 }
 
@@ -541,11 +609,11 @@ func loadCollectionItems(tx preparer, iri vocab.IRI, checks ...filters.Check) (v
 	if len(errs) > 0 {
 		return ret, errors.Join(errs...)
 	}
-	if len(ret) == 0 {
-		return ret, errNotFound
+
+	if len(ret) > 0 {
+		err = vocab.OnItem(ret, loadFirstLevelProperties(tx, checks...))
 	}
 
-	err = vocab.OnItem(ret, loadFirstLevelProperties(tx, checks...))
 	return ret, err
 }
 
@@ -579,10 +647,13 @@ func loadFromDb(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.Item
 		return nil, errors.NewNotFound(errNilItem, "not found")
 	}
 
+	if err = vocab.OnItem(it, loadFirstLevelProperties(tx, checks...)); err != nil {
+		return nil, err
+	}
+
 	if !vocab.IsCollection(it) {
 		return it, nil
 	}
-
 	typ := it.GetType()
 	switch {
 	case orderedCollectionTypes.Match(typ):
@@ -603,56 +674,56 @@ func loadFromDb(tx preparer, iri vocab.IRI, checks ...filters.Check) (vocab.Item
 var errNilItem = errors.Errorf("nil item")
 var errNotFound = errors.NotFoundf("not found")
 
-func (r *repo) addTo(tx *sql.Tx, col vocab.IRI, items ...vocab.Item) error {
+func (r *repo) addTo(tx preparer, col vocab.IRI, items ...vocab.Item) error {
 	if len(items) == 0 {
 		return nil
 	}
 
-	q := pgs.InsertInto("pub.collection")
-	for _, it := range items {
-		if vocab.IsNil(it) {
-			return errNilItem
-		}
-
-		ob, err := loadSingleObject(tx, it.GetLink())
-		if err != nil {
-			if it, err = r.save(tx, it); err != nil {
-				return errors.Annotatef(err, "unable to save item")
-			}
-			if vocab.IsIRI(it) {
-				it = ob
-			}
-		}
-		if vocab.IsNil(it) {
-			return errNotFound
-		}
-
-		q.NewRow().
-			Set("id", col).
-			Set("iri", it.GetLink())
+	colIt, err := loadSingleObject(tx, col)
+	if err != nil {
+		return err
 	}
 
-	st, err := tx.Prepare(q.String())
+	iris := vocab.ItemCollection(items).IRIs()
+	local, _ := loadMultipleObjects(tx, iris...)
+	localIRIs := local.IRIs()
+	toSaveLocally := make(vocab.ItemCollection, 0, len(items)-len(local))
+
+	cIns := pgs.InsertInto("pub.collection")
+	for _, it := range items {
+		if vocab.IsNil(it) {
+			continue
+		}
+		cIns.NewRow().Set("id", col).Set("iri", it.GetLink())
+		if localIRIs.Contains(it.GetLink()) {
+			continue
+		}
+		_ = toSaveLocally.Append(it)
+	}
+
+	if len(toSaveLocally) > 0 {
+		// NOTE(marius): save items that don't exist locally
+		var err error
+		if toSaveLocally, err = r.save(tx, toSaveLocally...); err != nil {
+			return errors.Annotatef(err, "unable to save non local items")
+		}
+	}
+
+	st, err := tx.Prepare(cIns.String())
 	if err != nil {
-		return errors.Annotatef(err, "unable to prepare statement")
+		return errors.Annotatef(err, "unable to prepare collection insert statement")
 	}
 	defer st.Close()
 
-	args := q.Args()
-	if _, err := st.Exec(args...); err != nil {
+	args := cIns.Args()
+	if _, err = st.Exec(args...); err != nil {
 		return errors.Annotatef(err, "unable to append item to collection")
 	}
 
 	// NOTE(marius): update collection object with the correct number of items
-	colOb, err := loadSingleObject(tx, col)
-	if err != nil {
-		return err
-	}
-	_ = vocab.OnCollection(colOb, func(col *vocab.Collection) error {
-		col.TotalItems = uint(len(args) / 2)
+	return vocab.OnCollection(colIt, func(col *vocab.Collection) error {
+		col.TotalItems = uint(len(items))
 		_, err = r.save(tx, col)
 		return err
 	})
-
-	return nil
 }
