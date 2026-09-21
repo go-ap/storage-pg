@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	github.com/go-ap/activitypub v0.0.0-20260918155011-090adf72874a
 	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20260918155248-f7ae9002f89f
-	github.com/go-ap/storage-conformance-suite v0.0.0-20260919133014-c15498a288ed
+	github.com/go-ap/filters v0.0.0-20260921115004-5ba28ceac6b8
+	github.com/go-ap/storage-conformance-suite v0.0.0-20260921115443-cfbb50e33e02
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/leporo/sqlf v1.4.0
