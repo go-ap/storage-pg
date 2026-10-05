@@ -3,10 +3,10 @@ module github.com/go-ap/storage-pg
 go 1.26.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20261001125346-b9d06cf2e5ad
+	github.com/go-ap/activitypub v0.0.0-20261005161154-ddfb80ed6f31
 	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20261001125446-b076b2dcd009
-	github.com/go-ap/storage-conformance-suite v0.0.0-20261001125600-8dd50a960d62
+	github.com/go-ap/filters v0.0.0-20261005164204-2bcbaf0c6cac
+	github.com/go-ap/storage-conformance-suite v0.0.0-20261005164843-ce03496950d5
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/leporo/sqlf v1.4.0
@@ -23,7 +23,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/RoaringBitmap/roaring v1.9.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.25.0 // indirect
+	github.com/bits-and-blooms/bitset v1.26.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -50,7 +50,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
 	github.com/jdkato/prose v1.2.1 // indirect
 	github.com/klauspost/compress v1.20.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
