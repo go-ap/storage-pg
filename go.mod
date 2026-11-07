@@ -3,9 +3,9 @@ module github.com/go-ap/storage-pg
 go 1.26.0
 
 require (
-	github.com/go-ap/activitypub v0.0.0-20261101142956-a76d71dd72b0
-	github.com/go-ap/errors v0.0.0-20260701132509-92e5e4fd6394
-	github.com/go-ap/filters v0.0.0-20261101144638-4754d87b7869
+	github.com/go-ap/activitypub v0.0.0-20261107170531-73ce953a88f6
+	github.com/go-ap/errors v0.0.0-20261107170344-5391268d9d2c
+	github.com/go-ap/filters v0.0.0-20261107170746-b873ae37c70e
 	github.com/go-ap/storage-conformance-suite v0.0.0-20261101145434-f950c6192791
 	github.com/google/go-cmp v0.7.0
 	github.com/jackc/pgx/v5 v5.12.0
@@ -43,7 +43,7 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ebitengine/purego v0.11.2 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/go-ap/jsonld v0.0.0-20260607140920-737b40e0ca38 // indirect
+	github.com/go-ap/jsonld v0.0.0-20261107170435-a7bb5ba3f894 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
